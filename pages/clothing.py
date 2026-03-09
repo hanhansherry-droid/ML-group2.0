@@ -1,69 +1,75 @@
 import streamlit as st
 import pandas as pd
-from PIL import Image
+import os
 
-st.set_page_config(layout="wide")
+st.set_page_config(
+    page_title="Clothing Collection",
+    layout="wide"
+)
 
-st.title("Clothing Selection")
+st.title("Clothing Collection")
 
-# 读取衣服数据
-items = pd.read_excel("items.xlsx")
+st.write("Browse the fashion database.")
 
-# 搜索
-search = st.text_input("Search clothing")
+# ======================
+# Load data
+# ======================
 
-if search:
-    items = items[items["Name"].str.contains(search, case=False)]
+df = pd.read_excel("items.xlsx")
 
-# 侧边栏筛选
+# ======================
+# Filters
+# ======================
+
 st.sidebar.header("Filters")
 
-brand = st.sidebar.multiselect(
+brand_filter = st.sidebar.selectbox(
     "Brand",
-    items["Brand"].unique()
+    ["All"] + sorted(df["Brand"].unique().tolist())
 )
 
-color = st.sidebar.multiselect(
-    "Color",
-    items["Color"].unique()
-)
-
-category = st.sidebar.multiselect(
+category_filter = st.sidebar.selectbox(
     "Category",
-    items["Category"].unique()
+    ["All"] + sorted(df["Category"].unique().tolist())
 )
 
-filtered = items.copy()
+color_filter = st.sidebar.selectbox(
+    "Color",
+    ["All"] + sorted(df["Color"].unique().tolist())
+)
 
-if brand:
-    filtered = filtered[filtered["Brand"].isin(brand)]
+# Apply filters
 
-if color:
-    filtered = filtered[filtered["Color"].isin(color)]
+filtered_df = df.copy()
 
-if category:
-    filtered = filtered[filtered["Category"].isin(category)]
+if brand_filter != "All":
+    filtered_df = filtered_df[filtered_df["Brand"] == brand_filter]
 
-st.write(f"{len(filtered)} items found")
+if category_filter != "All":
+    filtered_df = filtered_df[filtered_df["Category"] == category_filter]
 
-# 商品展示（4列）
+if color_filter != "All":
+    filtered_df = filtered_df[filtered_df["Color"] == color_filter]
+
+# ======================
+# Clothing grid
+# ======================
+
 cols = st.columns(4)
 
-for i, row in filtered.iterrows():
+for i, row in filtered_df.iterrows():
 
-    col = cols[i % 4]
+    with cols[i % 4]:
 
-    with col:
+        image_path = os.path.join("images", f"{row['ItemID']}.jpg")
 
-        image = Image.open(row["ImagePath"])
-
-        st.image(image, use_container_width=True)
+        if os.path.exists(image_path):
+            st.image(image_path, use_container_width=True)
+        else:
+            st.write("Image not found")
 
         st.markdown(f"**{row['Name']}**")
+        st.caption(row["Brand"])
 
-        st.write(row["Brand"])
-
-        st.write(row["Color"])
-
-        if st.button("Add to Cart", key=row["ItemID"]):
-            st.success("Added")
+        st.write(f"Category: {row['Category']}")
+        st.write(f"Color: {row['Color']}")
