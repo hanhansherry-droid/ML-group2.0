@@ -5,3 +5,6 @@ openai
 pillow
 numpy
 scikit-learn
+torch
+torchvision
+git+https://github.com/openai/CLIP.git
