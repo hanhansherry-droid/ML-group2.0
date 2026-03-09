@@ -1,4 +1,7 @@
 streamlit
 pandas
-Pillow
+openpyxl
+openai
+pillow
 numpy
+scikit-learn
