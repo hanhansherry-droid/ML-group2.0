@@ -3,98 +3,46 @@ import pandas as pd
 import os
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-from openai import OpenAI
-import clip
-import torch
 
 st.set_page_config(
-    page_title="AI Fashion Stylist",
+    page_title="Clothing Collection",
     layout="wide"
 )
 
-# ======================
-# STYLE
-# ======================
-
-st.markdown("""
-<style>
-
-.stApp {
-background-color:#fafafa;
-}
-
-.block-container{
-padding-top:2rem;
-}
-
-</style>
-""", unsafe_allow_html=True)
-
-st.title("AI Fashion Stylist")
+st.title("New Collection")
 
 # ======================
-# FAVORITES
+# Favorites storage
 # ======================
 
 if "favorites" not in st.session_state:
     st.session_state.favorites = set()
 
 # ======================
-# LOAD DATA
+# Load dataset
 # ======================
 
-df = pd.read_excel("items.xlsx")
-df.columns = df.columns.str.strip()
+@st.cache_data
+def load_items():
+    df = pd.read_excel("items.xlsx")
+    df.columns = df.columns.str.strip()
+    df = df.dropna(subset=["ItemID"])   # 防止 nan
+    return df
 
-embeddings = np.load("embeddings/clothing_embeddings.npy")
-
-# ======================
-# LOAD CLIP
-# ======================
-
-@st.cache_resource
-def load_clip():
-    model, preprocess = clip.load("ViT-B/32", device="cpu")
-    return model, preprocess
-
-model, preprocess = load_clip()
+df = load_items()
 
 # ======================
-# OPENAI CLIENT
+# Load embeddings
 # ======================
 
-client = OpenAI(api_key=st.secrets["openai"]["api_key"])
+@st.cache_data
+def load_embeddings():
+    return np.load("embeddings/clothing_embeddings.npy")
+
+embeddings = load_embeddings()
 
 # ======================
-# AI SEARCH
-# ======================
-
-st.subheader("AI Search")
-
-query = st.text_input("Describe an outfit")
-
-search_clicked = st.button("Search")
-
-if search_clicked and query:
-
-    text = clip.tokenize([query])
-
-    with torch.no_grad():
-        text_features = model.encode_text(text)
-
-    text_embedding = text_features.numpy()
-
-    similarity = cosine_similarity(text_embedding, embeddings)[0]
-
-    top_indices = similarity.argsort()[::-1][:12]
-
-    filtered_df = df.iloc[top_indices]
-
-else:
-    filtered_df = df
-
-# ======================
-# SIDEBAR FILTER
+# Sidebar Filters
 # ======================
 
 st.sidebar.header("Filters")
@@ -106,6 +54,12 @@ colors = ["All"] + sorted(df["Color"].dropna().unique().tolist())
 brand_filter = st.sidebar.selectbox("Brand", brands)
 category_filter = st.sidebar.selectbox("Category", categories)
 color_filter = st.sidebar.selectbox("Color", colors)
+
+# ======================
+# Apply filters
+# ======================
+
+filtered_df = df.copy()
 
 if brand_filter != "All":
     filtered_df = filtered_df[filtered_df["Brand"] == brand_filter]
@@ -119,7 +73,7 @@ if color_filter != "All":
 st.write(f"{len(filtered_df)} items found")
 
 # ======================
-# CLOTHING GRID
+# Clothing Grid
 # ======================
 
 cols = st.columns(4)
@@ -128,41 +82,46 @@ for i, row in filtered_df.iterrows():
 
     with cols[i % 4]:
 
-        image_path = os.path.join("images", f"{row['ItemID']}.jpg")
+        item_id = row["ItemID"]
+
+        image_path = os.path.join("images", f"{item_id}.jpg")
 
         if os.path.exists(image_path):
             st.image(image_path, use_container_width=True)
+        else:
+            st.write("Image not found")
 
         st.markdown(f"**{row['Brand']}**")
         st.write(row["Name"])
 
-        item_id = row["ItemID"]
+        # unique key 防止 Streamlit 报错
+        unique_key = f"{item_id}_{i}"
 
         # ======================
-        # FAVORITE
+        # Favorite button
         # ======================
 
         if item_id in st.session_state.favorites:
 
-            if st.button("❤️", key=f"fav_{item_id}"):
+            if st.button("❤️ Remove", key=f"fav_{unique_key}"):
 
                 st.session_state.favorites.remove(item_id)
 
         else:
 
-            if st.button("🤍", key=f"fav_{item_id}"):
+            if st.button("🤍 Save", key=f"fav_{unique_key}"):
 
                 st.session_state.favorites.add(item_id)
 
         # ======================
-        # SIMILAR
+        # Find Similar
         # ======================
 
-        if st.button("Find Similar", key=f"sim_{item_id}"):
+        if st.button("Find Similar", key=f"sim_{unique_key}"):
 
             idx = df[df["ItemID"] == item_id].index[0]
 
-            query_embedding = embeddings[idx].reshape(1,-1)
+            query_embedding = embeddings[idx].reshape(1, -1)
 
             similarity = cosine_similarity(query_embedding, embeddings)[0]
 
@@ -172,31 +131,10 @@ for i, row in filtered_df.iterrows():
 
             for j in top_indices:
 
-                sim = df.iloc[j]
+                sim_item = df.iloc[j]
 
-                st.write(sim["Brand"], "-", sim["Name"])
-
-        # ======================
-        # GENAI STYLING
-        # ======================
-
-        if st.button("Styling Advice", key=f"ai_{item_id}"):
-
-            prompt = f"""
-            Give styling advice for this fashion item.
-
-            Brand: {row['Brand']}
-            Item: {row['Name']}
-            Category: {row['Category']}
-            Color: {row['Color']}
-
-            Explain how to style this outfit.
-            """
-
-            response = client.chat.completions.create(
-                model="gpt-4.1-mini",
-                messages=[{"role":"user","content":prompt}]
-            )
-
-            st.write(response.choices[0].message.content)
-
+                st.write(
+                    sim_item["Brand"],
+                    "-",
+                    sim_item["Name"]
+                )
