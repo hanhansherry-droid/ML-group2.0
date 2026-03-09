@@ -2,12 +2,32 @@ import streamlit as st
 import pandas as pd
 import os
 import numpy as np
+import torch
+import clip
 from sklearn.metrics.pairwise import cosine_similarity
 
 st.set_page_config(
     page_title="Clothing Collection",
     layout="wide"
 )
+
+# ======================
+# UI STYLE
+# ======================
+
+st.markdown("""
+<style>
+
+.stApp {
+    background-color: #fafafa;
+}
+
+.block-container {
+    padding-top: 2rem;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 st.title("New Collection")
 
@@ -25,8 +45,46 @@ if "favorites" not in st.session_state:
 df = pd.read_excel("items.xlsx")
 df.columns = df.columns.str.strip()
 
-# load embeddings
+# ======================
+# Load embeddings
+# ======================
+
 embeddings = np.load("embeddings/clothing_embeddings.npy")
+
+# ======================
+# Load CLIP model
+# ======================
+
+device = "cpu"
+model, preprocess = clip.load("ViT-B/32", device=device)
+
+# ======================
+# AI Search
+# ======================
+
+st.subheader("AI Search")
+
+query = st.text_input("Describe clothing style")
+
+search_clicked = st.button("Search")
+
+if search_clicked and query:
+
+    text = clip.tokenize([query]).to(device)
+
+    with torch.no_grad():
+        text_features = model.encode_text(text)
+
+    text_embedding = text_features.cpu().numpy()
+
+    similarity = cosine_similarity(text_embedding, embeddings)[0]
+
+    top_indices = similarity.argsort()[::-1][:12]
+
+    filtered_df = df.iloc[top_indices]
+
+else:
+    filtered_df = df.copy()
 
 # ======================
 # Sidebar Filters
@@ -45,8 +103,6 @@ color_filter = st.sidebar.selectbox("Color", colors)
 # ======================
 # Apply filters
 # ======================
-
-filtered_df = df.copy()
 
 if brand_filter != "All":
     filtered_df = filtered_df[filtered_df["Brand"] == brand_filter]
@@ -89,14 +145,14 @@ for i, row in filtered_df.iterrows():
         # ======================
 
         if item_id in st.session_state.favorites:
-            if st.button("❤️ Remove", key=f"fav_{item_id}"):
+            if st.button("❤️", key=f"fav_{item_id}"):
                 st.session_state.favorites.remove(item_id)
         else:
-            if st.button("🤍 Save", key=f"fav_{item_id}"):
+            if st.button("🤍", key=f"fav_{item_id}"):
                 st.session_state.favorites.add(item_id)
 
         # ======================
-        # Similar items
+        # Find Similar
         # ======================
 
         if st.button("Find Similar", key=f"sim_{item_id}"):
@@ -112,6 +168,11 @@ for i, row in filtered_df.iterrows():
             st.write("Similar items:")
 
             for j in top_indices:
-                st.write(df.iloc[j]["ItemID"], "-", df.iloc[j]["Brand"])
+                sim_item = df.iloc[j]
 
+                st.write(
+                    sim_item["Brand"],
+                    "-",
+                    sim_item["Name"]
+                )
 
