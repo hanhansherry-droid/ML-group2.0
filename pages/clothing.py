@@ -7,38 +7,34 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("Clothing Collection")
-
-st.write("Browse the fashion database.")
+st.title("New Collection")
 
 # ======================
-# Load data
+# Load dataset
 # ======================
 
 df = pd.read_excel("items.xlsx")
 
+# 防止列名有空格
+df.columns = df.columns.str.strip()
+
 # ======================
-# Filters
+# Sidebar Filters
 # ======================
 
 st.sidebar.header("Filters")
 
-brand_filter = st.sidebar.selectbox(
-    "Brand",
-    ["All"] + sorted(df["Brand"].unique().tolist())
-)
+brands = ["All"] + sorted(df["Brand"].dropna().unique().tolist())
+categories = ["All"] + sorted(df["Category"].dropna().unique().tolist())
+colors = ["All"] + sorted(df["Color"].dropna().unique().tolist())
 
-category_filter = st.sidebar.selectbox(
-    "Category",
-    ["All"] + sorted(df["Category"].unique().tolist())
-)
+brand_filter = st.sidebar.selectbox("Brand", brands)
+category_filter = st.sidebar.selectbox("Category", categories)
+color_filter = st.sidebar.selectbox("Color", colors)
 
-color_filter = st.sidebar.selectbox(
-    "Color",
-    ["All"] + sorted(df["Color"].unique().tolist())
-)
-
+# ======================
 # Apply filters
+# ======================
 
 filtered_df = df.copy()
 
@@ -51,8 +47,10 @@ if category_filter != "All":
 if color_filter != "All":
     filtered_df = filtered_df[filtered_df["Color"] == color_filter]
 
+st.write(f"{len(filtered_df)} items found")
+
 # ======================
-# Clothing grid
+# Clothing Grid
 # ======================
 
 cols = st.columns(4)
@@ -68,8 +66,9 @@ for i, row in filtered_df.iterrows():
         else:
             st.write("Image not found")
 
-        st.markdown(f"**{row['Name']}**")
-        st.caption(row["Brand"])
+        # 品牌（黑色加粗）
+        st.markdown(f"**{row['Brand']}**")
 
-        st.write(f"Category: {row['Category']}")
-        st.write(f"Color: {row['Color']}")
+        # Item描述
+        st.write(row["Name"])
+
