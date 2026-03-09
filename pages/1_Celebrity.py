@@ -1,10 +1,9 @@
 import streamlit as st
 import pandas as pd
-from utils.data_loader import load_celebrities
 
 st.title("Select Celebrity")
 
-celebs = load_celebrities()
+celebs = pd.read_excel("celebrities.xlsx")
 
 selected = st.selectbox(
     "Choose Celebrity",
@@ -15,13 +14,7 @@ celeb = celebs[celebs["Name"] == selected].iloc[0]
 
 st.subheader(celeb["Name"])
 
-st.write("Nationality:", celeb["Nationality"])
-st.write("Profession:", celeb["Profession"])
-
-st.write("Description")
 st.write(celeb["Description"])
 
-st.write("Style Tags")
+st.write("Style:")
 st.write(celeb["StyleTags"])
-
-st.session_state["celebrity"] = celeb["Name"]
