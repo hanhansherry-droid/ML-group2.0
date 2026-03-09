@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import os
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
 
 st.set_page_config(
     page_title="Clothing Collection",
@@ -10,13 +12,21 @@ st.set_page_config(
 st.title("New Collection")
 
 # ======================
+# Favorites storage
+# ======================
+
+if "favorites" not in st.session_state:
+    st.session_state.favorites = set()
+
+# ======================
 # Load dataset
 # ======================
 
 df = pd.read_excel("items.xlsx")
-
-# 防止列名有空格
 df.columns = df.columns.str.strip()
+
+# load embeddings
+embeddings = np.load("embeddings/clothing_embeddings.npy")
 
 # ======================
 # Sidebar Filters
@@ -66,9 +76,42 @@ for i, row in filtered_df.iterrows():
         else:
             st.write("Image not found")
 
-        # 品牌（黑色加粗）
+        # brand
         st.markdown(f"**{row['Brand']}**")
 
-        # Item描述
+        # item name
         st.write(row["Name"])
+
+        item_id = row["ItemID"]
+
+        # ======================
+        # Favorite button
+        # ======================
+
+        if item_id in st.session_state.favorites:
+            if st.button("❤️ Remove", key=f"fav_{item_id}"):
+                st.session_state.favorites.remove(item_id)
+        else:
+            if st.button("🤍 Save", key=f"fav_{item_id}"):
+                st.session_state.favorites.add(item_id)
+
+        # ======================
+        # Similar items
+        # ======================
+
+        if st.button("Find Similar", key=f"sim_{item_id}"):
+
+            idx = df[df["ItemID"] == item_id].index[0]
+
+            query_embedding = embeddings[idx].reshape(1, -1)
+
+            similarity = cosine_similarity(query_embedding, embeddings)[0]
+
+            top_indices = similarity.argsort()[::-1][1:5]
+
+            st.write("Similar items:")
+
+            for j in top_indices:
+                st.write(df.iloc[j]["ItemID"], "-", df.iloc[j]["Brand"])
+
 
