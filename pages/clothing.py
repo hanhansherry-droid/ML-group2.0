@@ -26,10 +26,8 @@ if "favorites" not in st.session_state:
 def load_items():
     df = pd.read_excel("items.xlsx")
     df.columns = df.columns.str.strip()
-
-    # 删除 ItemID 为空的数据
     df = df.dropna(subset=["ItemID"])
-
+    df = df.reset_index(drop=True)
     return df
 
 df = load_items()
@@ -43,6 +41,9 @@ def load_embeddings():
     return np.load("embeddings/clothing_embeddings.npy")
 
 embeddings = load_embeddings()
+
+# 建立 ItemID → embedding index 映射
+item_index_map = {item: i for i, item in enumerate(df["ItemID"])}
 
 # ======================
 # Sidebar Filters
@@ -92,12 +93,11 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
         if os.path.exists(image_path):
             st.image(image_path, use_container_width=True)
         else:
-            st.write("Image not found")
+            st.empty()
 
         st.markdown(f"**{row['Brand']}**")
         st.write(row["Name"])
 
-        # 用 index 做唯一 key
         fav_key = f"fav_{i}"
         sim_key = f"sim_{i}"
 
@@ -121,7 +121,7 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
 
         if st.button("Find Similar", key=sim_key):
 
-            idx = df[df["ItemID"] == item_id].index[0]
+            idx = item_index_map[item_id]
 
             query_embedding = embeddings[idx].reshape(1, -1)
 
@@ -135,8 +135,9 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
 
                 sim_item = df.iloc[j]
 
-                st.write(
-                    sim_item["Brand"],
-                    "-",
-                    sim_item["Name"]
-                )
+                sim_image = os.path.join("images", f"{sim_item['ItemID']}.jpg")
+
+                if os.path.exists(sim_image):
+                    st.image(sim_image, width=120)
+
+                st.write(sim_item["Brand"], "-", sim_item["Name"])
