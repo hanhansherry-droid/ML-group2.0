@@ -26,8 +26,13 @@ if "favorites" not in st.session_state:
 def load_items():
     df = pd.read_excel("items.xlsx")
     df.columns = df.columns.str.strip()
-    df = df.dropna(subset=["ItemID"])
+
+    # 清洗 ItemID
+    df["ItemID"] = df["ItemID"].astype(str)
+    df = df[df["ItemID"] != "nan"]
+
     df = df.reset_index(drop=True)
+
     return df
 
 df = load_items()
@@ -43,7 +48,7 @@ def load_embeddings():
 embeddings = load_embeddings()
 
 # 建立 ItemID → embedding index 映射
-item_index_map = {item: i for i, item in enumerate(df["ItemID"])}
+item_index_map = {item: idx for idx, item in enumerate(df["ItemID"])}
 
 # ======================
 # Sidebar Filters
@@ -98,8 +103,9 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
         st.markdown(f"**{row['Brand']}**")
         st.write(row["Name"])
 
-        fav_key = f"fav_{i}"
-        sim_key = f"sim_{i}"
+        # 唯一 key（只用 index）
+        fav_key = f"favorite_button_{i}"
+        sim_key = f"similar_button_{i}"
 
         # ======================
         # Favorite
