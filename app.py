@@ -12,7 +12,7 @@ st.set_page_config(
 st.markdown("""
 <style>
 
-/* remove default padding */
+/* remove padding */
 
 .block-container{
 padding-top:0rem;
@@ -38,12 +38,12 @@ font-family:Helvetica, Arial, sans-serif;
 /* logo */
 
 .logo{
-font-size:26px;
+font-size:28px;
 font-weight:700;
-letter-spacing:3px;
+letter-spacing:2px;
 }
 
-/* nav menu */
+/* nav */
 
 .nav{
 display:flex;
@@ -52,45 +52,33 @@ font-size:16px;
 color:#444;
 }
 
-/* ===== HERO SECTION ===== */
+/* ===== HERO IMAGE ===== */
 
-.hero{
-position:relative;
+.hero-img img{
 width:100%;
-height:540px;
-overflow:hidden;
-}
-
-.hero img{
-width:100%;
-height:540px;
+height:520px;
 object-fit:cover;
 }
 
-/* hero text */
+/* hero title */
 
-.hero-text{
-position:absolute;
-top:50%;
-left:50%;
-transform:translate(-50%,-50%);
-color:white;
-text-align:center;
-font-family:Helvetica, Arial, sans-serif;
-}
-
-.hero-text h1{
-font-size:64px;
+.hero-title{
+font-size:56px;
 font-weight:700;
-letter-spacing:1px;
+text-align:center;
+margin-top:60px;
 }
 
-.hero-text p{
-font-size:22px;
+/* hero subtitle */
+
+.hero-sub{
+font-size:20px;
+color:#666;
+text-align:center;
 margin-top:10px;
 }
 
-/* CTA button */
+/* buttons */
 
 .stButton button{
 background:black;
@@ -101,19 +89,11 @@ font-size:18px;
 border-radius:6px;
 }
 
-/* section */
-
-.section{
-padding:80px 20%;
-text-align:center;
-font-family:Helvetica, Arial, sans-serif;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
 # ======================
-# HEADER (像官网导航)
+# HEADER
 # ======================
 
 st.markdown("""
@@ -136,20 +116,30 @@ st.markdown("""
 # ======================
 
 st.markdown("""
-<div class="hero">
-
+<div class="hero-img">
 <img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f">
-
-<div class="hero-text">
-<h1>AI Celebrity Styling Platform</h1>
-<p>AI powered fashion styling assistant</p>
-</div>
-
 </div>
 """, unsafe_allow_html=True)
 
 # ======================
-# CTA BUTTON
+# HERO TEXT
+# ======================
+
+st.markdown(
+'<div class="hero-title">AI Celebrity Styling Platform</div>',
+unsafe_allow_html=True
+)
+
+st.markdown(
+'<div class="hero-sub">AI powered fashion styling assistant for celebrity looks</div>',
+unsafe_allow_html=True
+)
+
+st.write("")
+st.write("")
+
+# ======================
+# MAIN BUTTON
 # ======================
 
 col1, col2, col3 = st.columns([2,1,2])
@@ -158,22 +148,26 @@ with col2:
     if st.button("Start Styling"):
         st.switch_page("pages/celebrity.py")
 
+st.write("")
+st.write("")
+
 # ======================
-# INFO SECTION
+# SECOND SECTION
 # ======================
 
-st.markdown("""
-<div class="section">
-
-<h2>AI Powered Fashion Styling</h2>
-
-<p>
+st.markdown(
+"""
+<h2 style='text-align:center;'>AI Powered Fashion Styling</h2>
+<p style='text-align:center; font-size:18px; color:#666;'>
 Select a celebrity, choose an event and styling preferences,
 discover curated fashion pieces and generate brand request emails automatically.
 </p>
+""",
+unsafe_allow_html=True
+)
 
-</div>
-""", unsafe_allow_html=True)
+st.write("")
+st.write("")
 
 # ======================
 # NAV BUTTONS
@@ -188,3 +182,8 @@ with col1:
 with col2:
     if st.button("Browse Clothing"):
         st.switch_page("pages/clothing.py")
+
+with col2:
+    if st.button("Browse Clothing"):
+        st.switch_page("pages/clothing.py")
+
