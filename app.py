@@ -16,47 +16,28 @@ st.markdown("""
     background-color: #f7f7f7;
 }
 
-/* Main title */
+/* Hero title */
 
-.main-title {
-    font-size: 56px;
-    font-weight: 700;
-    text-align: center;
+.hero-title{
+font-size:64px;
+font-weight:800;
 }
 
 /* subtitle */
 
-.subtitle {
-    text-align: center;
-    font-size: 22px;
-    color: #555;
+.hero-sub{
+font-size:22px;
+color:#555;
 }
 
-/* section title */
+/* step cards */
 
-.section-title{
-    font-size:32px;
-    font-weight:600;
-    text-align:center;
-    margin-top:40px;
-}
-
-/* step card */
-
-.step-card{
-    background:white;
-    padding:25px;
-    border-radius:12px;
-    text-align:center;
-    box-shadow:0 2px 10px rgba(0,0,0,0.05);
-}
-
-/* buttons */
-
-.stButton button{
-    height:60px;
-    font-size:20px;
-    border-radius:10px;
+.step{
+background:white;
+padding:25px;
+border-radius:12px;
+text-align:center;
+box-shadow:0 3px 10px rgba(0,0,0,0.05);
 }
 
 </style>
@@ -83,79 +64,83 @@ st.sidebar.caption("AI Fashion Styling Demo")
 # HERO SECTION
 # ======================
 
-st.markdown('<p class="main-title">AI Celebrity Styling Platform</p>', unsafe_allow_html=True)
+left, right = st.columns([1.2,1])
 
-st.markdown(
-    '<p class="subtitle">AI powered styling assistant for celebrity fashion selection</p>',
-    unsafe_allow_html=True
-)
+with left:
 
-st.write("")
+    st.markdown(
+        '<div class="hero-title">AI Celebrity Styling Platform</div>',
+        unsafe_allow_html=True
+    )
 
-col1, col2, col3 = st.columns([1,2,1])
+    st.markdown(
+        '<div class="hero-sub">AI-powered fashion assistant for celebrity styling</div>',
+        unsafe_allow_html=True
+    )
 
-with col2:
+    st.write("")
+    st.write("")
+
     if st.button("⭐ Start Styling", use_container_width=True):
         st.switch_page("pages/celebrity.py")
 
-st.write("")
+with right:
 
-st.image(
-    "https://images.unsplash.com/photo-1529139574466-a303027c1d8b",
-    use_container_width=True
-)
+    st.image(
+        "https://images.unsplash.com/photo-1529139574466-a303027c1d8b",
+        use_container_width=True
+    )
+
+st.write("")
+st.write("")
+st.divider()
 
 # ======================
 # HOW IT WORKS
 # ======================
 
-st.markdown('<p class="section-title">How the Platform Works</p>', unsafe_allow_html=True)
+st.subheader("How the Platform Works")
 
-st.write("")
+c1, c2, c3, c4 = st.columns(4)
 
-col1, col2, col3, col4 = st.columns(4)
-
-with col1:
+with c1:
     st.markdown("""
-    <div class="step-card">
+    <div class="step">
     <h3>1</h3>
-    <b>Select Celebrity</b>
-    <p>Choose the celebrity you are styling.</p>
+    Select Celebrity
     </div>
     """, unsafe_allow_html=True)
 
-with col2:
+with c2:
     st.markdown("""
-    <div class="step-card">
+    <div class="step">
     <h3>2</h3>
-    <b>Define Event</b>
-    <p>Select occasion and rental date.</p>
+    Choose Event
     </div>
     """, unsafe_allow_html=True)
 
-with col3:
+with c3:
     st.markdown("""
-    <div class="step-card">
+    <div class="step">
     <h3>3</h3>
-    <b>Browse Clothing</b>
-    <p>Explore AI-recommended fashion pieces.</p>
+    Browse Clothing
     </div>
     """, unsafe_allow_html=True)
 
-with col4:
+with c4:
     st.markdown("""
-    <div class="step-card">
+    <div class="step">
     <h3>4</h3>
-    <b>Generate Email</b>
-    <p>Create brand sample request emails.</p>
+    Generate Email
     </div>
     """, unsafe_allow_html=True)
 
 st.write("")
 st.write("")
+st.divider()
 
 # ======================
-# CTA Buttons
+# CTA SECTION
 # ======================
 
 col1, col2 = st.columns(2)
@@ -170,3 +155,7 @@ with col2:
 
 st.write("")
 st.info("Use AI to explore celebrity styling and discover fashion collections.")
+
+st.write("")
+st.info("Use AI to explore celebrity styling and discover fashion collections.")
+
