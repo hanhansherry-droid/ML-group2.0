@@ -1,20 +1,26 @@
 import streamlit as st
 import pandas as pd
 
-st.title("Select Celebrity")
+st.title("⭐ Select Celebrity")
 
-celebs = pd.read_excel("celebrities.xlsx")
+df = pd.read_excel("celebrities.xlsx")
 
-selected = st.selectbox(
-    "Choose Celebrity",
-    celebs["Name"]
-)
+# 清理列名
+df.columns = df.columns.str.strip()
+df.columns = df.columns.str.replace(" ", "")
 
-celeb = celebs[celebs["Name"] == selected].iloc[0]
+names = df["Name"].tolist()
 
-st.subheader(celeb["Name"])
+selected = st.selectbox("Choose Celebrity", names)
+
+celeb = df[df["Name"] == selected].iloc[0]
+
+st.header(celeb["Name"])
+
+st.write("**Nationality:**", celeb["Nationality"])
+st.write("**Profession:**", celeb["Profession"])
 
 st.write(celeb["Description"])
 
-st.write("Style:")
+st.subheader("Style")
 st.write(celeb["StyleTags"])
