@@ -147,3 +147,4 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
                     st.image(sim_image, width=120)
 
                 st.write(sim_item["Brand"], "-", sim_item["Name"])
+
