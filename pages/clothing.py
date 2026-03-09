@@ -26,7 +26,10 @@ if "favorites" not in st.session_state:
 def load_items():
     df = pd.read_excel("items.xlsx")
     df.columns = df.columns.str.strip()
-    df = df.dropna(subset=["ItemID"])   # 防止 nan
+
+    # 删除 ItemID 为空的数据
+    df = df.dropna(subset=["ItemID"])
+
     return df
 
 df = load_items()
@@ -78,7 +81,7 @@ st.write(f"{len(filtered_df)} items found")
 
 cols = st.columns(4)
 
-for i, row in filtered_df.iterrows():
+for i, row in filtered_df.reset_index(drop=True).iterrows():
 
     with cols[i % 4]:
 
@@ -94,30 +97,29 @@ for i, row in filtered_df.iterrows():
         st.markdown(f"**{row['Brand']}**")
         st.write(row["Name"])
 
-        # unique key 防止 Streamlit 报错
-        unique_key = f"{item_id}_{i}"
+        # 用 index 做唯一 key
+        fav_key = f"fav_{i}"
+        sim_key = f"sim_{i}"
 
         # ======================
-        # Favorite button
+        # Favorite
         # ======================
 
         if item_id in st.session_state.favorites:
 
-            if st.button("❤️ Remove", key=f"fav_{unique_key}"):
-
+            if st.button("❤️ Remove", key=fav_key):
                 st.session_state.favorites.remove(item_id)
 
         else:
 
-            if st.button("🤍 Save", key=f"fav_{unique_key}"):
-
+            if st.button("🤍 Save", key=fav_key):
                 st.session_state.favorites.add(item_id)
 
         # ======================
         # Find Similar
         # ======================
 
-        if st.button("Find Similar", key=f"sim_{unique_key}"):
+        if st.button("Find Similar", key=sim_key):
 
             idx = df[df["ItemID"] == item_id].index[0]
 
