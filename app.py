@@ -12,179 +12,158 @@ st.set_page_config(
 st.markdown("""
 <style>
 
-.stApp{
-background: linear-gradient(to bottom,#f5f5f7,#ffffff);
+/* remove default padding */
+
+.block-container{
+padding-top:0rem;
+padding-left:0rem;
+padding-right:0rem;
 }
 
-/* HERO TITLE */
+/* sticky header */
 
-.hero-title{
-font-size:72px;
-font-weight:800;
-letter-spacing:-1px;
+.header{
+position:sticky;
+top:0;
+z-index:999;
+background:white;
+padding:18px 60px;
+border-bottom:1px solid #eee;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+/* logo */
+
+.logo{
+font-size:28px;
+font-weight:700;
+letter-spacing:2px;
+}
+
+/* hero section */
+
+.hero{
+position:relative;
+width:100%;
+height:520px;
+overflow:hidden;
+}
+
+.hero img{
+width:100%;
+height:520px;
+object-fit:cover;
+}
+
+/* hero text */
+
+.hero-text{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+color:white;
 text-align:center;
 }
 
-/* SUBTITLE */
-
-.hero-sub{
-font-size:24px;
-color:#666;
-text-align:center;
+.hero-text h1{
+font-size:60px;
+font-weight:700;
 }
 
-/* BUTTON */
+.hero-text p{
+font-size:22px;
+margin-top:10px;
+}
 
-.stButton button{
-height:65px;
-font-size:20px;
-border-radius:12px;
-background:#111;
+/* button */
+
+.hero-btn button{
+background:black;
 color:white;
 border:none;
+height:55px;
+font-size:18px;
+border-radius:6px;
+margin-top:20px;
 }
 
-.stButton button:hover{
-background:#333;
-}
+/* section */
 
-/* STEP CARDS */
-
-.card{
-background:white;
-padding:30px;
-border-radius:14px;
+.section{
+padding:80px 20%;
 text-align:center;
-box-shadow:0 6px 20px rgba(0,0,0,0.06);
-}
-
-.card h3{
-font-size:22px;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 # ======================
-# SIDEBAR
+# HEADER
 # ======================
 
-st.sidebar.title("AI Stylist Platform")
-
-st.sidebar.markdown("### Navigation")
-
-if st.sidebar.button("⭐ Celebrity Styling"):
-    st.switch_page("pages/celebrity.py")
-
-if st.sidebar.button("👗 Clothing Collection"):
-    st.switch_page("pages/clothing.py")
-
-st.sidebar.markdown("---")
-st.sidebar.caption("AI Fashion Styling Demo")
-
-# ======================
-# HERO
-# ======================
-
-st.write("")
-st.write("")
-
-st.markdown(
-'<div class="hero-title">AI Celebrity Styling Platform</div>',
-unsafe_allow_html=True
-)
-
-st.markdown(
-'<div class="hero-sub">AI powered fashion styling assistant for celebrity looks</div>',
-unsafe_allow_html=True
-)
-
-st.write("")
-st.write("")
-
-center = st.columns([1,2,1])
-
-with center[1]:
-    if st.button("⭐ Start Styling", use_container_width=True):
-        st.switch_page("pages/celebrity.py")
-
-st.write("")
-st.write("")
+st.markdown("""
+<div class="header">
+<div class="logo">AI STYLIST</div>
+<div>
+Celebrity Styling &nbsp;&nbsp;&nbsp; Clothing Collection
+</div>
+</div>
+""", unsafe_allow_html=True)
 
 # ======================
 # HERO IMAGE
 # ======================
 
-st.image(
-"https://images.unsplash.com/photo-1529139574466-a303027c1d8b",
-use_container_width=True
-)
-
-st.write("")
-st.write("")
+st.markdown("""
+<div class="hero">
+<img src="https://images.unsplash.com/photo-1544441893-675973e31985">
+<div class="hero-text">
+<h1>AI Celebrity Styling Platform</h1>
+<p>AI powered fashion styling assistant</p>
+</div>
+</div>
+""", unsafe_allow_html=True)
 
 # ======================
-# WORKFLOW
+# BUTTON
 # ======================
 
-st.subheader("Platform Workflow")
+col1,col2,col3 = st.columns([2,1,2])
 
-st.write("")
-
-c1,c2,c3,c4 = st.columns(4)
-
-with c1:
-    st.markdown("""
-<div class="card">
-<h3>1</h3>
-<b>Select Celebrity</b>
-<p>Choose the celebrity you are styling.</p>
-</div>
-""",unsafe_allow_html=True)
-
-with c2:
-    st.markdown("""
-<div class="card">
-<h3>2</h3>
-<b>Select Event</b>
-<p>Choose the event or appearance.</p>
-</div>
-""",unsafe_allow_html=True)
-
-with c3:
-    st.markdown("""
-<div class="card">
-<h3>3</h3>
-<b>Choose Styling</b>
-<p>Filter clothing by style and availability.</p>
-</div>
-""",unsafe_allow_html=True)
-
-with c4:
-    st.markdown("""
-<div class="card">
-<h3>4</h3>
-<b>Generate Email</b>
-<p>Automatically create brand request emails.</p>
-</div>
-""",unsafe_allow_html=True)
-
-st.write("")
-st.write("")
+with col2:
+    if st.button("Start Styling"):
+        st.switch_page("pages/celebrity.py")
 
 # ======================
-# CTA
+# SECTION
+# ======================
+
+st.markdown("""
+<div class="section">
+
+<h2>Explore AI Powered Styling</h2>
+
+<p>
+Select a celebrity, choose an event and styling preferences, 
+discover curated fashion pieces and generate brand request emails automatically.
+</p>
+
+</div>
+""", unsafe_allow_html=True)
+
+# ======================
+# BUTTONS
 # ======================
 
 col1,col2 = st.columns(2)
 
 with col1:
-    if st.button("⭐ Select Celebrity", use_container_width=True):
+    if st.button("Select Celebrity"):
         st.switch_page("pages/celebrity.py")
 
 with col2:
-    if st.button("👗 Browse Clothing", use_container_width=True):
+    if st.button("Browse Clothing"):
         st.switch_page("pages/clothing.py")
-
-st.write("")
-st.info("Use AI to explore celebrity styling and discover fashion collections.")
