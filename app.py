@@ -1,6 +1,4 @@
 import streamlit as st
-import pandas as pd
-import os
 
 st.set_page_config(
     page_title="AI Celebrity Styling Platform",
@@ -8,65 +6,84 @@ st.set_page_config(
 )
 
 # ======================
-# Title
+# Style (背景 + UI)
 # ======================
 
-st.title("AI Celebrity Styling Platform")
+st.markdown("""
+<style>
 
-st.write("Discover fashion pieces for celebrity styling.")
+.stApp {
+    background-color: #f7f7f7;
+}
 
-# Fashion banner
+.main-title {
+    font-size: 48px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.subtitle {
+    text-align: center;
+    font-size: 20px;
+    color: gray;
+}
+
+.nav-button button {
+    height: 70px;
+    font-size: 20px;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# ======================
+# Sidebar
+# ======================
+
+st.sidebar.title("AI Stylist Platform")
+
+st.sidebar.markdown("### Navigation")
+
+if st.sidebar.button("⭐ Celebrity Styling"):
+    st.switch_page("pages/celebrity.py")
+
+if st.sidebar.button("👗 Clothing Collection"):
+    st.switch_page("pages/clothing.py")
+
+st.sidebar.markdown("---")
+st.sidebar.caption("AI Fashion Styling Demo")
+
+# ======================
+# Hero Section
+# ======================
+
+st.markdown('<p class="main-title">AI Celebrity Styling Platform</p>', unsafe_allow_html=True)
+
+st.markdown(
+    '<p class="subtitle">Discover fashion pieces for celebrity styling</p>',
+    unsafe_allow_html=True
+)
+
 st.image(
     "https://images.unsplash.com/photo-1529139574466-a303027c1d8b",
     use_container_width=True
 )
 
-st.divider()
+st.write("")
 
 # ======================
-# Navigation
+# Navigation Buttons
 # ======================
-
-st.subheader("Navigation")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown("### ⭐ Select Celebrity")
-    st.markdown("Go to the celebrity styling page.")
-    st.markdown("[Open Celebrity Page](./celebrity)")
+    if st.button("⭐ Select Celebrity", use_container_width=True):
+        st.switch_page("pages/celebrity.py")
 
 with col2:
-    st.markdown("### 👗 Browse Clothing")
-    st.markdown("Explore the clothing collection.")
-    st.markdown("[Open Clothing Page](./clothing)")
+    if st.button("👗 Browse Clothing", use_container_width=True):
+        st.switch_page("pages/clothing.py")
 
-st.divider()
-
-# ======================
-# Clothing preview
-# ======================
-
-st.header("New Collection")
-
-df = pd.read_excel("items.xlsx")
-
-cols = st.columns(4)
-
-for i, row in df.head(8).iterrows():
-
-    with cols[i % 4]:
-
-        image_path = os.path.join("images", f"{row['ItemID']}.jpg")
-
-        if os.path.exists(image_path):
-            st.image(image_path, use_container_width=True)
-        else:
-            st.write("Image not found")
-
-        st.markdown(f"**{row['Name']}**")
-        st.caption(row["Brand"])
-
-        st.caption(row["Brand"])
-
-
+st.write("")
+st.info("Use AI to explore celebrity styling and discover fashion collections.")
