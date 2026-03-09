@@ -1,41 +1,47 @@
 import streamlit as st
-from utils.data_loader import load_items
+import pandas as pd
 from PIL import Image
 
-st.title("Select Clothing")
+st.title("Clothing Selection")
 
-items, tags = load_items()
+# 读取衣服数据
+items = pd.read_excel("items.xlsx")
 
-if "cart" not in st.session_state:
-    st.session_state.cart = []
+# 侧边栏筛选
+st.sidebar.header("Filter")
 
-# filters
-brand = st.sidebar.multiselect(
+brand_filter = st.sidebar.multiselect(
     "Brand",
     items["Brand"].unique()
 )
 
-category = st.sidebar.multiselect(
-    "Category",
-    items["Category"].unique()
-)
-
-color = st.sidebar.multiselect(
+color_filter = st.sidebar.multiselect(
     "Color",
     items["Color"].unique()
 )
 
+category_filter = st.sidebar.multiselect(
+    "Category",
+    items["Category"].unique()
+)
+
+# 筛选逻辑
 filtered = items.copy()
 
-if brand:
-    filtered = filtered[filtered["Brand"].isin(brand)]
+if brand_filter:
+    filtered = filtered[filtered["Brand"].isin(brand_filter)]
 
-if category:
-    filtered = filtered[filtered["Category"].isin(category)]
+if color_filter:
+    filtered = filtered[filtered["Color"].isin(color_filter)]
 
-if color:
-    filtered = filtered[filtered["Color"].isin(color)]
+if category_filter:
+    filtered = filtered[filtered["Category"].isin(category_filter)]
 
+
+st.write(f"{len(filtered)} items found")
+
+
+# 商品网格（淘宝风格）
 cols = st.columns(4)
 
 for i, row in filtered.iterrows():
@@ -46,11 +52,12 @@ for i, row in filtered.iterrows():
 
         image = Image.open(row["ImagePath"])
 
-        st.image(image)
+        st.image(image, use_container_width=True)
 
-        st.write(row["Name"])
-        st.write(row["Brand"])
+        st.markdown(f"**{row['Name']}**")
 
-        if st.button("Add", key=row["ItemID"]):
+        st.write(f"Brand: {row['Brand']}")
+        st.write(f"Color: {row['Color']}")
 
-            st.session_state.cart.append(row["ItemID"])
+        if st.button("Add to Selection", key=row["ItemID"]):
+            st.success("Added")
