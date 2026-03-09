@@ -1,4 +1,6 @@
 import pandas as pd
+import numpy as np
+
 
 def load_items():
 
@@ -13,3 +15,10 @@ def load_celebrities():
     celebs = pd.read_csv("data/celebrities.csv")
 
     return celebs
+
+
+def load_embeddings():
+
+    embeddings = np.load("embeddings/clothing_embeddings.npy")
+
+    return embeddings
