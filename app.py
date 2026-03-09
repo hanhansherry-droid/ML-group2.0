@@ -6,13 +6,13 @@ st.set_page_config(
 )
 
 # ======================
-# GLOBAL STYLE
+# STYLE
 # ======================
 
 st.markdown("""
 <style>
 
-/* remove padding */
+/* remove default padding */
 
 .block-container{
 padding-top:0rem;
@@ -20,14 +20,14 @@ padding-left:0rem;
 padding-right:0rem;
 }
 
-/* ===== HEADER ===== */
+/* HEADER */
 
 .header{
 position:sticky;
 top:0;
 z-index:999;
 background:white;
-padding:20px 60px;
+padding:18px 60px;
 border-bottom:1px solid #eee;
 display:flex;
 justify-content:space-between;
@@ -52,24 +52,25 @@ font-size:16px;
 color:#444;
 }
 
-/* ===== HERO IMAGE ===== */
+/* hero image */
 
-.hero-img img{
+.hero img{
 width:100%;
 height:520px;
 object-fit:cover;
 }
 
-/* hero title */
+/* title */
 
 .hero-title{
-font-size:56px;
+font-size:58px;
 font-weight:700;
 text-align:center;
 margin-top:60px;
+font-family:Helvetica, Arial, sans-serif;
 }
 
-/* hero subtitle */
+/* subtitle */
 
 .hero-sub{
 font-size:20px;
@@ -78,7 +79,7 @@ text-align:center;
 margin-top:10px;
 }
 
-/* buttons */
+/* button */
 
 .stButton button{
 background:black;
@@ -116,8 +117,8 @@ st.markdown("""
 # ======================
 
 st.markdown("""
-<div class="hero-img">
-<img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f">
+<div class="hero">
+<img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d">
 </div>
 """, unsafe_allow_html=True)
 
@@ -139,32 +140,30 @@ st.write("")
 st.write("")
 
 # ======================
-# MAIN BUTTON
+# START BUTTON
 # ======================
 
 col1, col2, col3 = st.columns([2,1,2])
 
 with col2:
-    if st.button("Start Styling"):
+    if st.button("Start Styling", key="start_styling"):
         st.switch_page("pages/celebrity.py")
 
 st.write("")
 st.write("")
 
 # ======================
-# SECOND SECTION
+# INFO SECTION
 # ======================
 
-st.markdown(
-"""
+st.markdown("""
 <h2 style='text-align:center;'>AI Powered Fashion Styling</h2>
+
 <p style='text-align:center; font-size:18px; color:#666;'>
 Select a celebrity, choose an event and styling preferences,
 discover curated fashion pieces and generate brand request emails automatically.
 </p>
-""",
-unsafe_allow_html=True
-)
+""", unsafe_allow_html=True)
 
 st.write("")
 st.write("")
@@ -176,14 +175,11 @@ st.write("")
 col1, col2 = st.columns(2)
 
 with col1:
-    if st.button("Select Celebrity"):
+    if st.button("Select Celebrity", key="select_celebrity"):
         st.switch_page("pages/celebrity.py")
 
 with col2:
-    if st.button("Browse Clothing"):
+    if st.button("Browse Clothing", key="browse_clothing"):
         st.switch_page("pages/clothing.py")
 
-with col2:
-    if st.button("Browse Clothing"):
-        st.switch_page("pages/clothing.py")
 
