@@ -7,88 +7,37 @@ st.set_page_config(
 )
 
 # ======================
-# CSS 美化
+# Title
 # ======================
 
-st.markdown("""
-<style>
+st.title("AI Celebrity Styling Platform")
 
-body {
-    background-color: white;
-}
-
-.header{
-    font-size:40px;
-    font-weight:600;
-    text-align:center;
-}
-
-.subtitle{
-    font-size:20px;
-    text-align:center;
-    color:gray;
-}
-
-.center-button{
-    text-align:center;
-}
-
-.product-card{
-    border-radius:10px;
-    padding:10px;
-    background:#f7f7f7;
-}
-
-</style>
-""", unsafe_allow_html=True)
-
-# ======================
-# 顶部导航
-# ======================
-
-nav1,nav2,nav3 = st.columns([1,4,1])
-
-with nav1:
-    st.write("☰ Menu")
-
-with nav2:
-    st.markdown("<h1 style='text-align:center'>AI STYLING</h1>", unsafe_allow_html=True)
-
-with nav3:
-    st.write("❤ Cart")
+st.write("Discover fashion pieces for celebrity styling.")
 
 st.divider()
 
 # ======================
-# Banner
+# Navigation
 # ======================
 
-st.image(
-    "https://images.unsplash.com/photo-1490481651871-ab68de25d43d",
-    use_container_width=True
-)
+col1, col2 = st.columns(2)
 
-st.markdown("<div class='header'>AI Celebrity Styling Platform</div>", unsafe_allow_html=True)
+with col1:
+    st.page_link(
+        "pages/1_Celebrity.py",
+        label="⭐ Select Celebrity"
+    )
 
-st.markdown("<div class='subtitle'>Discover fashion pieces for celebrity styling</div>", unsafe_allow_html=True)
+with col2:
+    st.page_link(
+        "pages/Select_Clothing.py",
+        label="👗 Browse Clothing"
+    )
 
-st.write("")
-
-btn1,btn2 = st.columns(2)
-
-with btn1:
-    if st.button("Start Styling"):
-        st.switch_page("pages/1_Celebrity.py")
-
-with btn2:
-    if st.button("Browse Collection"):
-        st.switch_page("pages/Select_Clothing.py")
-
-st.write("")
-st.write("")
+st.divider()
 
 # ======================
-# 商品展示
+# Clothing preview
 # ======================
 
 st.header("New Collection")
@@ -97,7 +46,7 @@ df = pd.read_excel("items.xlsx")
 
 cols = st.columns(4)
 
-for i,row in df.head(8).iterrows():
+for i, row in df.head(8).iterrows():
 
     with cols[i % 4]:
 
@@ -106,4 +55,3 @@ for i,row in df.head(8).iterrows():
         st.write(row["Name"])
 
         st.caption(row["Brand"])
-
