@@ -127,24 +127,28 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
 
         if st.button("Find Similar", key=sim_key):
 
-            idx = item_index_map[item_id]
+    idx = item_index_map[item_id]
 
-            query_embedding = embeddings[idx].reshape(1, -1)
+    query_embedding = embeddings[idx].reshape(1, -1)
 
-            similarity = cosine_similarity(query_embedding, embeddings)[0]
+    similarity = cosine_similarity(query_embedding, embeddings)[0]
 
-            top_indices = similarity.argsort()[::-1][1:5]
+    top_indices = similarity.argsort()[::-1][1:5]
 
-            st.write("Similar items:")
+    st.write("Similar items:")
 
-            for j in top_indices:
+    for j in top_indices:
 
-                sim_item = df.iloc[j]
+        # 防止 index 超出 df
+        if j >= len(df):
+            continue
 
-                sim_image = os.path.join("images", f"{sim_item['ItemID']}.jpg")
+        sim_item = df.iloc[j]
 
-                if os.path.exists(sim_image):
-                    st.image(sim_image, width=120)
+        sim_image = os.path.join("images", f"{sim_item['ItemID']}.jpg")
 
-                st.write(sim_item["Brand"], "-", sim_item["Name"])
+        if os.path.exists(sim_image):
+            st.image(sim_image, width=120)
+
+        st.write(sim_item["Brand"], "-", sim_item["Name"])
 
