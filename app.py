@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import os
 
 st.set_page_config(
     page_title="AI Celebrity Styling Platform",
@@ -13,6 +14,12 @@ st.set_page_config(
 st.title("AI Celebrity Styling Platform")
 
 st.write("Discover fashion pieces for celebrity styling.")
+
+# Fashion banner
+st.image(
+    "https://images.unsplash.com/photo-1529139574466-a303027c1d8b",
+    use_container_width=True
+)
 
 st.divider()
 
@@ -50,12 +57,16 @@ for i, row in df.head(8).iterrows():
 
     with cols[i % 4]:
 
-        try:
-            st.image(row["ImagePath"])
-        except:
+        image_path = os.path.join("images", f"{row['ItemID']}.jpg")
+
+        if os.path.exists(image_path):
+            st.image(image_path, use_container_width=True)
+        else:
             st.write("Image not found")
 
-        st.write(row["Name"])
+        st.markdown(f"**{row['Name']}**")
+        st.caption(row["Brand"])
 
         st.caption(row["Brand"])
+
 
