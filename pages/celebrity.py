@@ -1,101 +1,68 @@
 import streamlit as st
 import pandas as pd
+import os
 
-st.set_page_config(layout="wide")
+st.set_page_config(page_title="Select Celebrity", layout="wide")
 
-# ======================
-# TITLE
-# ======================
-
-st.markdown(
-"""
-<h1 style='text-align:center;'>Select Celebrity</h1>
-<p style='text-align:center; color:#666; font-size:18px;'>
-Choose the celebrity you are styling for
-</p>
-""",
-unsafe_allow_html=True
-)
-
-st.write("")
-st.write("")
+st.title("Select Celebrity")
 
 # ======================
-# LOAD DATA
+# Load celebrity data
 # ======================
 
-df = pd.read_excel("celebrities.xlsx")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CELEB_PATH = os.path.join(BASE_DIR, "celebrities.xlsx")
 
-df.columns = df.columns.str.strip()
-df.columns = df.columns.str.replace(" ", "")
+@st.cache_data
+def load_celebrities():
+    df = pd.read_excel(CELEB_PATH)
+    df.columns = df.columns.str.strip()
+    return df
 
-# ======================
-# CELEBRITY SELECT
-# ======================
-
-names = df["Name"].tolist()
-
-col1, col2, col3 = st.columns([1,2,1])
-
-with col2:
-    selected = st.selectbox("Choose Celebrity", names)
-
-celeb = df[df["Name"] == selected].iloc[0]
-
-st.write("")
-st.write("")
+celeb_df = load_celebrities()
 
 # ======================
-# CELEBRITY CARD
+# Session state
 # ======================
 
-col1, col2 = st.columns([1,2])
-
-with col1:
-
-    image_path = f"images/{selected}.jpg"
-
-    try:
-        st.image(image_path, use_container_width=True)
-    except:
-        st.write("Image not available")
-
-with col2:
-
-    st.markdown(
-        f"""
-        <h2>{celeb["Name"]}</h2>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.write(f"**Nationality:** {celeb['Nationality']}")
-    st.write(f"**Profession:** {celeb['Profession']}")
-
-    st.write("")
-    st.write(celeb["Description"])
-
-    st.write("")
-    st.write("**Style Tags**")
-
-    tags = celeb["StyleTags"].split(",")
-
-    for tag in tags:
-        st.markdown(
-            f"<span style='background:#f2f2f2; padding:6px 12px; margin-right:8px; border-radius:12px;'>{tag.strip()}</span>",
-            unsafe_allow_html=True
-        )
-
-st.write("")
-st.write("")
+if "selected_celebrity" not in st.session_state:
+    st.session_state.selected_celebrity = None
 
 # ======================
-# NEXT BUTTON
+# Celebrity list
 # ======================
 
-col1, col2, col3 = st.columns([2,1,2])
+cols = st.columns(3)
 
-with col2:
-    if st.button("Continue to Styling"):
-        st.session_state["celebrity"] = selected
-        st.switch_page("pages/styling.py")
+for i, row in celeb_df.iterrows():
+
+    with cols[i % 3]:
+
+        st.subheader(row["Name"])
+
+        if "ImageURL" in celeb_df.columns:
+            st.image(row["ImageURL"], use_container_width=True)
+
+        st.write(row["Description"])
+
+        if st.button("Select", key=row["Name"]):
+
+            st.session_state.selected_celebrity = row["Name"]
+            st.success(f"Selected: {row['Name']}")
+
+# ======================
+# Continue button
+# ======================
+
+st.divider()
+
+if st.session_state.selected_celebrity:
+
+    st.write("Selected:", st.session_state.selected_celebrity)
+
+    if st.button("Continue to Clothing"):
+        st.switch_page("pages/clothing.py")
+
+else:
+
+    st.info("Please select a celebrity.")
