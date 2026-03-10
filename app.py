@@ -57,27 +57,36 @@ color:#444;
 
 /* HERO */
 
+.hero{
+position:relative;
+}
+
 .hero img{
 width:100%;
 height:520px;
 object-fit:cover;
+filter:brightness(70%);
 }
 
-/* TITLE */
+.hero-text{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+text-align:center;
+color:white;
+}
 
 .hero-title{
-font-size:58px;
+font-size:60px;
 font-weight:700;
-text-align:center;
-margin-top:60px;
-font-family:Helvetica, Arial, sans-serif;
+text-shadow:2px 2px 20px rgba(0,0,0,0.6);
 }
 
 .hero-sub{
-font-size:20px;
-color:#666;
-text-align:center;
+font-size:22px;
 margin-top:10px;
+text-shadow:2px 2px 20px rgba(0,0,0,0.6);
 }
 
 /* BUTTON */
@@ -100,7 +109,7 @@ background:#333;
 
 .feature{
 text-align:center;
-margin-top:40px;
+margin-top:60px;
 }
 
 .feature h2{
@@ -121,15 +130,8 @@ background:#fafafa;
 border-right:1px solid #eee;
 }
 
-/* IMAGE STYLE */
-
 img{
-border-radius:10px;
-}
-
-img:hover{
-transform:scale(1.02);
-transition:0.3s;
+border-radius:8px;
 }
 
 </style>
@@ -160,19 +162,23 @@ st.markdown("""
 
 st.markdown("""
 <div class="hero">
-<img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d">
+
+<img src="https://images.unsplash.com/photo-1520975661595-6453be3f7070">
+
+<div class="hero-text">
+
+<div class="hero-title">
+AI Celebrity Styling Platform
+</div>
+
+<div class="hero-sub">
+AI powered fashion styling assistant for luxury celebrity looks
+</div>
+
+</div>
+
 </div>
 """, unsafe_allow_html=True)
-
-st.markdown(
-'<div class="hero-title">AI Celebrity Styling Platform</div>',
-unsafe_allow_html=True
-)
-
-st.markdown(
-'<div class="hero-sub">AI powered fashion styling assistant for celebrity looks</div>',
-unsafe_allow_html=True
-)
 
 st.write("")
 st.write("")
@@ -184,26 +190,25 @@ st.write("")
 col1, col2, col3 = st.columns([2,1,2])
 
 with col2:
-    if st.button("Start Styling", key="start_styling"):
+    if st.button("Start Styling", key="start_btn"):
         st.switch_page("pages/1_celebrity.py")
 
 st.write("")
 st.write("")
 
 # ======================
-# WORKFLOW STEPS
+# FEATURE
 # ======================
 
 st.markdown("""
 <div class="feature">
 
-<h2>How It Works</h2>
+<h2>AI Powered Fashion Styling</h2>
 
 <p>
-1. Select a celebrity style reference  
-2. Explore curated fashion pieces  
-3. Save looks to your stylist cart  
-4. Generate brand sample request emails
+Select a celebrity, explore curated fashion pieces,
+save looks to your stylist cart and generate
+brand sample request emails automatically.
 </p>
 
 </div>
@@ -219,38 +224,38 @@ st.write("")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    if st.button("Select Celebrity", key="btn_celebrity"):
+    if st.button("Select Celebrity", key="nav_celebrity"):
         st.switch_page("pages/1_celebrity.py")
 
 with col2:
-    if st.button("Browse Clothing", key="btn_clothing"):
+    if st.button("Browse Clothing", key="nav_clothing"):
         st.switch_page("pages/2_clothing.py")
 
 with col3:
-    if st.button("Generate Email", key="btn_email"):
+    if st.button("Generate Email", key="nav_email"):
         st.switch_page("pages/4_email.py")
 
 st.write("")
 st.write("")
 
 # ======================
-# TRENDING PREVIEW
+# TRENDING LUXURY LOOKS
 # ======================
 
-st.markdown("### Trending Looks")
+st.markdown("### Trending Luxury Looks")
 
 col1, col2, col3, col4 = st.columns(4)
 
-sample_images = [
-"https://images.unsplash.com/photo-1520975916090-3105956dac38",
-"https://images.unsplash.com/photo-1519741497674-611481863552",
-"https://images.unsplash.com/photo-1503342217505-b0a15ec3261c",
-"https://images.unsplash.com/photo-1529139574466-a303027c1d8b"
+images = [
+"https://images.unsplash.com/photo-1509631179647-0177331693ae",
+"https://images.unsplash.com/photo-1515886657613-9f3515b0c78f",
+"https://images.unsplash.com/photo-1529139574466-a303027c1d8b",
+"https://images.unsplash.com/photo-1544441893-675973e31985"
 ]
 
 for i,col in enumerate([col1,col2,col3,col4]):
     with col:
-        st.image(sample_images[i], use_container_width=True)
+        st.image(images[i], use_container_width=True)
 
 st.write("")
 st.write("")
@@ -281,21 +286,17 @@ cart = st.session_state.cart
 if len(cart) == 0:
     st.sidebar.write("No items saved")
 
-for i, item in enumerate(cart):
+for i,item in enumerate(cart):
 
     st.sidebar.image(item["ImageURL"], width=80)
     st.sidebar.markdown(f"**{item['Brand']}**")
     st.sidebar.caption(item["Name"])
 
-    if st.sidebar.button("Remove", key=f"remove_sidebar_{i}"):
+    if st.sidebar.button("Remove", key=f"remove_item_{i}"):
         st.session_state.cart.pop(i)
         st.rerun()
 
 st.sidebar.divider()
 
-if st.sidebar.button("Open Cart", key="sidebar_open_cart"):
+if st.sidebar.button("Open Cart", key="open_cart_btn"):
     st.switch_page("pages/3_cart.py")
-if st.sidebar.button("Open Cart", key="sidebar_open_cart"):
-    st.switch_page("pages/cart.py")
-
-
