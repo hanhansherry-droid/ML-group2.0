@@ -23,6 +23,8 @@ st.markdown("""
 padding-top:0rem;
 padding-left:0rem;
 padding-right:0rem;
+max-width:1400px;
+margin:auto;
 }
 
 /* HEADER */
@@ -94,7 +96,7 @@ transition:0.3s;
 background:#333;
 }
 
-/* FEATURE SECTION */
+/* FEATURE */
 
 .feature{
 text-align:center;
@@ -171,7 +173,7 @@ st.write("")
 col1, col2, col3 = st.columns([2,1,2])
 
 with col2:
-    if st.button("Start Styling"):
+    if st.button("Start Styling", key="start_styling"):
         st.switch_page("pages/celebrity.py")
 
 st.write("")
@@ -199,35 +201,35 @@ st.write("")
 st.write("")
 
 # ======================
-# NAV BUTTONS (优化居中)
+# NAV BUTTONS
 # ======================
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    if st.button("Select Celebrity"):
+    if st.button("Select Celebrity", key="btn_celebrity"):
         st.switch_page("pages/celebrity.py")
 
 with col2:
-    if st.button("Browse Clothing"):
+    if st.button("Browse Clothing", key="btn_clothing"):
         st.switch_page("pages/clothing.py")
 
 with col3:
-    if st.button("Generate Email"):
+    if st.button("Generate Email", key="btn_email"):
         st.switch_page("pages/email.py")
 
 # ======================
 # SIDEBAR CART
 # ======================
 
-st.sidebar.title("🛍 Stylist Cart")
+st.sidebar.markdown("## 🛍 Stylist Cart")
 
 cart = st.session_state.cart
 
 if len(cart) == 0:
     st.sidebar.write("No items saved")
 
-for i,item in enumerate(cart):
+for i, item in enumerate(cart):
 
     st.sidebar.image(item["ImageURL"], width=80)
     st.sidebar.markdown(f"**{item['Brand']}**")
@@ -239,11 +241,6 @@ for i,item in enumerate(cart):
 
 st.sidebar.divider()
 
-# CART 页面按钮（位于 Clothing 和 Email workflow 中间）
-
-if st.sidebar.button("Open Cart"):
+if st.sidebar.button("Open Cart", key="sidebar_open_cart"):
     st.switch_page("pages/cart.py")
-if st.sidebar.button("Open Cart"):
-    st.switch_page("pages/cart.py")
-
 
