@@ -28,6 +28,9 @@ HF_BASE = "https://huggingface.co/datasets/sherry2026/fashion-clothing-dataset/r
 if "favorites" not in st.session_state:
     st.session_state.favorites = set()
 
+if "cart" not in st.session_state:
+    st.session_state.cart = []
+
 if "preview_item" not in st.session_state:
     st.session_state.preview_item = None
 
@@ -40,6 +43,7 @@ if "similar_items" not in st.session_state:
 
 @st.cache_data
 def load_items():
+
     df = pd.read_csv(DATA_PATH, encoding="utf-8-sig")
     df.columns = df.columns.str.strip()
 
@@ -47,6 +51,7 @@ def load_items():
         df = df.drop(columns=["No."])
 
     df["ItemID"] = df["ItemID"].astype(str).str.strip()
+
     return df
 
 df = load_items()
@@ -57,10 +62,15 @@ df = load_items()
 
 @st.cache_data
 def load_tags():
+
     if os.path.exists(TAGS_PATH):
+
         tags = pd.read_excel(TAGS_PATH)
+
         tags.columns = tags.columns.str.strip()
+
         tags["ItemID"] = tags["ItemID"].astype(str).str.strip()
+
         return tags
 
     return pd.DataFrame(columns=["ItemID", "TagType", "Tag"])
@@ -73,12 +83,16 @@ tags_df = load_tags()
 
 @st.cache_data
 def load_celebrities():
+
     if os.path.exists(CELEB_PATH):
+
         df = pd.read_excel(CELEB_PATH)
+
         df.columns = df.columns.str.strip()
+
         return df
 
-    return pd.DataFrame(columns=["Name", "Description", "Style Tags"])
+    return pd.DataFrame(columns=["Name","Description","Style Tags"])
 
 celeb_df = load_celebrities()
 
@@ -92,7 +106,7 @@ def load_embeddings():
 
 embeddings = load_embeddings()
 
-item_index_map = {item: idx for idx, item in enumerate(df["ItemID"])}
+item_index_map = {item:idx for idx,item in enumerate(df["ItemID"])}
 
 # ==============================
 # IMAGE URL
@@ -101,13 +115,14 @@ item_index_map = {item: idx for idx, item in enumerate(df["ItemID"])}
 @st.cache_data
 def get_image_url(item_id):
 
-    extensions = [".jpg", ".png", ".jpeg", ".webp"]
+    extensions = [".jpg",".png",".jpeg",".webp"]
 
     for ext in extensions:
 
         url = f"{HF_BASE}{item_id}{ext}"
 
         try:
+
             r = requests.get(url)
 
             if r.status_code == 200:
@@ -119,7 +134,38 @@ def get_image_url(item_id):
     return "https://via.placeholder.com/400x500?text=No+Image"
 
 # ==============================
-# SIDEBAR FILTERS
+# SIDEBAR CART
+# ==============================
+
+st.sidebar.title("🛍 Stylist Cart")
+
+cart = st.session_state.cart
+
+if len(cart) == 0:
+    st.sidebar.write("No items saved")
+
+for i,item in enumerate(cart):
+
+    st.sidebar.image(item["ImageURL"], width=80)
+
+    st.sidebar.markdown(f"**{item['Brand']}**")
+
+    st.sidebar.caption(item["Name"])
+
+    if st.sidebar.button("Remove", key=f"sidebar_remove_{i}"):
+
+        st.session_state.cart.pop(i)
+
+        st.rerun()
+
+st.sidebar.divider()
+
+if st.sidebar.button("Open Cart"):
+
+    st.switch_page("pages/cart.py")
+
+# ==============================
+# FILTERS
 # ==============================
 
 st.sidebar.header("Filters")
@@ -139,19 +185,18 @@ color_multi = st.sidebar.multiselect(
     sorted(df["Color"].dropna().unique())
 )
 
-# TAG FILTER
-
-occasion_tags = tags_df[tags_df["TagType"] == "Occasion"]["Tag"].unique()
-style_tags = tags_df[tags_df["TagType"] == "Style"]["Tag"].unique()
+occasion_tags = tags_df[tags_df["TagType"]=="Occasion"]["Tag"].unique()
+style_tags = tags_df[tags_df["TagType"]=="Style"]["Tag"].unique()
 
 occasion_filter = st.sidebar.multiselect("Occasion", sorted(occasion_tags))
 style_filter = st.sidebar.multiselect("Style", sorted(style_tags))
 
 # ==============================
-# CELEBRITY SELECTOR
+# CELEBRITY
 # ==============================
 
 celebrity_list = celeb_df["Name"].dropna().unique().tolist()
+
 celebrity = st.sidebar.selectbox("Celebrity", celebrity_list)
 
 # ==============================
@@ -170,123 +215,16 @@ if color_multi:
     filtered_df = filtered_df[filtered_df["Color"].isin(color_multi)]
 
 if occasion_filter:
+
     item_ids = tags_df[tags_df["Tag"].isin(occasion_filter)]["ItemID"].unique()
+
     filtered_df = filtered_df[filtered_df["ItemID"].isin(item_ids)]
 
 if style_filter:
+
     item_ids = tags_df[tags_df["Tag"].isin(style_filter)]["ItemID"].unique()
+
     filtered_df = filtered_df[filtered_df["ItemID"].isin(item_ids)]
-
-# ==============================
-# GET CELEBRITY STYLE
-# ==============================
-
-def get_celebrity_style(name):
-
-    row = celeb_df[celeb_df["Name"] == name]
-
-    if len(row) > 0:
-
-        description = row.iloc[0]["Description"]
-        style = row.iloc[0]["Style Tags"]
-
-        return style, description
-
-    return "", ""
-
-# ==============================
-# AI STYLIST (HF API FIXED)
-# ==============================
-
-def ai_agent(filtered_items):
-
-    if "huggingface" not in st.secrets:
-        return "⚠️ HuggingFace API key not configured."
-
-    api_key = st.secrets["huggingface"].get("api_key", "")
-
-    if api_key == "":
-        return "⚠️ HuggingFace API key missing."
-
-    if len(filtered_items) == 0:
-        return "No clothing items match the filters."
-
-    style_hint, celeb_description = get_celebrity_style(celebrity)
-
-    brands = ", ".join(filtered_items["Brand"].unique()[:5])
-    categories = ", ".join(filtered_items["Category"].unique()[:5])
-    colors = ", ".join(filtered_items["Color"].unique()[:5])
-
-    prompt = f"""
-You are a professional celebrity stylist.
-
-Celebrity: {celebrity}
-
-Celebrity style tags:
-{style_hint}
-
-Celebrity description:
-{celeb_description}
-
-Filters:
-Brand: {brand_multi}
-Category: {category_multi}
-Color: {color_multi}
-Occasion: {occasion_filter}
-Style: {style_filter}
-
-Available inventory:
-Brands: {brands}
-Categories: {categories}
-Colors: {colors}
-
-Recommend clothing items suitable for the celebrity and explain why.
-"""
-
-    headers = {"Authorization": f"Bearer {api_key}"}
-
-    payload = {
-        "inputs": prompt,
-        "parameters": {"max_new_tokens": 200}
-    }
-
-    try:
-
-        response = requests.post(
-            "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
-            headers=headers,
-            json=payload,
-            timeout=60
-        )
-
-        if response.status_code != 200:
-            return f"API error {response.status_code}"
-
-        result = response.json()
-
-        if isinstance(result, list) and "generated_text" in result[0]:
-            return result[0]["generated_text"]
-
-        if isinstance(result, dict) and "generated_text" in result:
-            return result["generated_text"]
-
-        return str(result)
-
-    except Exception as e:
-        return f"AI error: {e}"
-
-# ==============================
-# AI BUTTON
-# ==============================
-
-if st.sidebar.button("Generate AI Styling Advice"):
-
-    with st.sidebar.spinner("AI stylist analysing..."):
-
-        advice = ai_agent(filtered_df)
-
-    st.sidebar.success("Styling Advice")
-    st.sidebar.write(advice)
 
 # ==============================
 # GRID
@@ -296,19 +234,21 @@ st.subheader(f"{len(filtered_df)} items")
 
 cols = st.columns(4)
 
-for i, row in filtered_df.reset_index(drop=True).iterrows():
+for i,row in filtered_df.reset_index(drop=True).iterrows():
 
-    with cols[i % 4]:
+    with cols[i%4]:
 
         item_id = row["ItemID"]
+
         image_url = get_image_url(item_id)
 
         st.image(image_url, use_container_width=True)
 
         st.markdown(f"**{row['Brand']}**")
+
         st.write(row["Name"])
 
-        item_tags = tags_df[tags_df["ItemID"] == item_id]["Tag"].tolist()
+        item_tags = tags_df[tags_df["ItemID"]==item_id]["Tag"].tolist()
 
         if item_tags:
             st.caption(" ".join([f"#{t}" for t in item_tags]))
@@ -318,20 +258,53 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
         preview_key = f"preview_{item_id}"
 
         if st.button("Preview", key=preview_key):
+
             st.session_state.preview_item = row
 
+        # ======================
+        # SAVE / REMOVE
+        # ======================
+
         if item_id in st.session_state.favorites:
+
             if st.button("❤️ Remove", key=fav_key):
+
                 st.session_state.favorites.remove(item_id)
+
+                st.session_state.cart = [
+                    x for x in st.session_state.cart
+                    if x["ItemID"] != item_id
+                ]
+
+                st.rerun()
+
         else:
+
             if st.button("🤍 Save", key=fav_key):
+
                 st.session_state.favorites.add(item_id)
+
+                cart_item = {
+                    "ItemID": item_id,
+                    "Brand": row["Brand"],
+                    "Name": row["Name"],
+                    "ImageURL": image_url,
+                    "note": ""
+                }
+
+                st.session_state.cart.append(cart_item)
+
+                st.rerun()
+
+        # ======================
+        # SIMILAR
+        # ======================
 
         if st.button("Find Similar", key=sim_key):
 
             idx = item_index_map[item_id]
 
-            query_embedding = embeddings[idx].reshape(1, -1)
+            query_embedding = embeddings[idx].reshape(1,-1)
 
             similarity = cosine_similarity(query_embedding, embeddings)[0]
 
@@ -340,28 +313,31 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
             st.session_state.similar_items = df.iloc[top_indices]
 
 # ==============================
-# SIMILAR ITEMS
+# SIMILAR
 # ==============================
 
 if st.session_state.similar_items is not None:
 
     st.divider()
+
     st.subheader("Recommended Similar Items")
 
     cols = st.columns(4)
 
-    for i, row in st.session_state.similar_items.reset_index(drop=True).iterrows():
+    for i,row in st.session_state.similar_items.reset_index(drop=True).iterrows():
 
-        with cols[i % 4]:
+        with cols[i%4]:
 
             image_url = get_image_url(row["ItemID"])
 
             st.image(image_url, use_container_width=True)
 
             st.markdown(f"**{row['Brand']}**")
+
             st.write(row["Name"])
 
     if st.button("Close Similar"):
+
         st.session_state.similar_items = None
 
 # ==============================
@@ -373,28 +349,35 @@ if st.session_state.preview_item is not None:
     item = st.session_state.preview_item
 
     st.divider()
+
     st.subheader("Item Preview")
 
-    col1, col2 = st.columns([1,1])
+    col1,col2 = st.columns([1,1])
 
     with col1:
 
         image_url = get_image_url(item["ItemID"])
+
         st.image(image_url, use_container_width=True)
 
     with col2:
 
         st.markdown(f"### {item['Brand']}")
+
         st.write(item["Name"])
 
         st.write("Category:", item["Category"])
+
         st.write("Color:", item["Color"])
+
         st.write("Season:", item["Season"])
 
-        item_tags = tags_df[tags_df["ItemID"] == item["ItemID"]]["Tag"].tolist()
+        item_tags = tags_df[tags_df["ItemID"]==item["ItemID"]]["Tag"].tolist()
 
         if item_tags:
+
             st.write("Tags:", ", ".join(item_tags))
 
         if st.button("Close Preview"):
+
             st.session_state.preview_item = None
