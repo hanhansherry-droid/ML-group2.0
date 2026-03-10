@@ -20,14 +20,71 @@ def load_contacts():
 contacts = load_contacts()
 
 # =========================
+# Load celebrity database
+# =========================
+
+@st.cache_data
+def load_celebrities():
+    return pd.read_excel("celebrities.xlsx")
+
+celeb_df = load_celebrities()
+
+# =========================
+# Get selected celebrity
+# =========================
+
+selected_celebrity = st.session_state.get("selected_celebrity")
+
+if selected_celebrity is None:
+    st.warning("No celebrity selected")
+    st.stop()
+
+celeb_row = celeb_df[celeb_df["Name"] == selected_celebrity].iloc[0]
+
+artist_name = celeb_row["Name"]
+artist_intro = celeb_row["Description"]
+
+# =========================
+# Celebrity display
+# =========================
+
+st.subheader("Celebrity")
+
+st.write("Artist:", artist_name)
+
+st.write(artist_intro)
+
+# 预留明星图片接口
+# 你以后可以加：
+
+# st.image(celeb_row["ImageURL"])
+
+# =========================
 # Get cart items
 # =========================
 
 items = st.session_state.get("email_items", [])
 
 if len(items) == 0:
-    st.warning("No items selected")
+    st.warning("No clothing selected")
     st.stop()
+
+# =========================
+# Show selected looks
+# =========================
+
+st.subheader("Selected Looks")
+
+for item in items:
+
+    col1,col2 = st.columns([1,2])
+
+    with col1:
+        st.image(item["ImageURL"], width=200)
+
+    with col2:
+        st.write(item["Brand"])
+        st.write(item["Name"])
 
 # =========================
 # Group items by brand
@@ -39,20 +96,10 @@ for item in items:
     brand_groups[item["Brand"]].append(item)
 
 # =========================
-# Artist info
+# Event inputs
 # =========================
 
-artist_name = "Sdanny Lee"
-
-artist_intro = """
-Sdanny Lee is a singer and performer known for her powerful stage presence
-and distinctive modern aesthetic. She has collaborated with several
-fashion houses and appeared in high-profile cultural events.
-"""
-
-# =========================
-# Event Inputs
-# =========================
+st.divider()
 
 st.header("Styling Request Information")
 
@@ -92,14 +139,14 @@ def send_email(to_email, subject, html):
         )
 
 # =========================
-# Generate Emails
+# Generate emails
 # =========================
 
 if st.button("Generate Emails"):
 
     st.session_state.generated_emails = {}
 
-    for brand, items in brand_groups.items():
+    for brand, brand_items in brand_groups.items():
 
         brand_row = contacts[contacts["brand"] == brand]
 
@@ -111,7 +158,7 @@ if st.button("Generate Emails"):
 
         looks_html = ""
 
-        for item in items:
+        for item in brand_items:
 
             looks_html += f"""
             <p><b>{item['Brand']} {item['Name']}</b></p>
@@ -151,14 +198,14 @@ Huna<br>
         }
 
 # =========================
-# Display Generated Emails
+# Display generated emails
 # =========================
 
 if "generated_emails" in st.session_state:
 
     st.divider()
 
-    for brand, data in st.session_state.generated_emails.items():
+    for brand,data in st.session_state.generated_emails.items():
 
         st.subheader(f"{brand}")
 
