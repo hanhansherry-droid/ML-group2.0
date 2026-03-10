@@ -24,7 +24,7 @@ def load_celebrities():
     df = pd.read_excel(CELEB_PATH)
     df.columns = df.columns.str.strip()
 
-    # ⭐ 关键修复
+    # 修复URL读取问题
     df["ImageURL"] = df["ImageURL"].astype(str).str.strip()
 
     return df
@@ -52,16 +52,22 @@ st.divider()
 
 col1, col2 = st.columns([1,1])
 
+# ======================
+# Image
+# ======================
+
 with col1:
 
     image_url = row["ImageURL"]
 
-    st.write("DEBUG URL:", image_url)   # 用来确认URL
-
-    if image_url.startswith("http"):
+    if isinstance(image_url, str) and image_url.startswith("http"):
         st.image(image_url, use_container_width=True)
     else:
         st.warning("Image not available")
+
+# ======================
+# Info
+# ======================
 
 with col2:
 
@@ -82,15 +88,20 @@ with col2:
 
 st.divider()
 
-if st.button("Save Celebrity"):
+if st.button("Save Celebrity", key="save_celeb"):
 
     st.session_state.selected_celebrity = selected_name
+
     st.success(f"{selected_name} saved for styling")
+
+# ======================
+# Continue workflow
+# ======================
 
 if "selected_celebrity" in st.session_state:
 
     st.write("Current styling target:", st.session_state.selected_celebrity)
 
-    if st.button("Continue to Clothing"):
+    if st.button("Continue to Clothing", key="continue_clothing"):
 
-        st.switch_page("pages/clothing.py")
+        st.switch_page("pages/2_clothing.py")
