@@ -25,6 +25,8 @@ padding-left:0rem;
 padding-right:0rem;
 }
 
+/* HEADER */
+
 .header{
 position:sticky;
 top:0;
@@ -51,11 +53,15 @@ font-size:16px;
 color:#444;
 }
 
+/* HERO */
+
 .hero img{
 width:100%;
 height:520px;
 object-fit:cover;
 }
+
+/* TITLE */
 
 .hero-title{
 font-size:58px;
@@ -72,6 +78,8 @@ text-align:center;
 margin-top:10px;
 }
 
+/* BUTTON */
+
 .stButton button{
 background:black;
 color:white;
@@ -79,6 +87,36 @@ border:none;
 height:55px;
 font-size:18px;
 border-radius:6px;
+transition:0.3s;
+}
+
+.stButton button:hover{
+background:#333;
+}
+
+/* FEATURE SECTION */
+
+.feature{
+text-align:center;
+margin-top:40px;
+}
+
+.feature h2{
+font-size:32px;
+}
+
+.feature p{
+font-size:18px;
+color:#666;
+max-width:800px;
+margin:auto;
+}
+
+/* SIDEBAR */
+
+section[data-testid="stSidebar"]{
+background:#fafafa;
+border-right:1px solid #eee;
 }
 
 </style>
@@ -140,26 +178,31 @@ st.write("")
 st.write("")
 
 # ======================
-# INFO
+# FEATURE DESCRIPTION
 # ======================
 
 st.markdown("""
-<h2 style='text-align:center;'>AI Powered Fashion Styling</h2>
+<div class="feature">
 
-<p style='text-align:center; font-size:18px; color:#666;'>
-Select a celebrity, choose an event and styling preferences,
-discover curated fashion pieces and generate brand request emails automatically.
+<h2>AI Powered Fashion Styling</h2>
+
+<p>
+Select a celebrity, choose styling preferences,
+discover curated fashion pieces and generate
+brand sample request emails automatically.
 </p>
+
+</div>
 """, unsafe_allow_html=True)
 
 st.write("")
 st.write("")
 
 # ======================
-# NAV BUTTONS
+# NAV BUTTONS (优化居中)
 # ======================
 
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
 
 with col1:
     if st.button("Select Celebrity"):
@@ -168,6 +211,10 @@ with col1:
 with col2:
     if st.button("Browse Clothing"):
         st.switch_page("pages/clothing.py")
+
+with col3:
+    if st.button("Generate Email"):
+        st.switch_page("pages/email.py")
 
 # ======================
 # SIDEBAR CART
@@ -192,6 +239,11 @@ for i,item in enumerate(cart):
 
 st.sidebar.divider()
 
+# CART 页面按钮（位于 Clothing 和 Email workflow 中间）
+
 if st.sidebar.button("Open Cart"):
     st.switch_page("pages/cart.py")
+if st.sidebar.button("Open Cart"):
+    st.switch_page("pages/cart.py")
+
 
