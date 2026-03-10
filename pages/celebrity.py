@@ -4,7 +4,9 @@ import os
 
 st.set_page_config(page_title="Select Celebrity", layout="wide")
 
-st.title("Select Celebrity")
+st.title("AI Fashion Stylist")
+
+st.subheader("Select Celebrity")
 
 # ======================
 # PATH
@@ -13,90 +15,87 @@ st.title("Select Celebrity")
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CELEB_PATH = os.path.join(BASE_DIR, "celebrities.xlsx")
 
-# HuggingFace base path
-HF_BASE = "https://huggingface.co/datasets/sherry2026/celebrity/resolve/main/"
-
 # ======================
 # Load data
 # ======================
 
 @st.cache_data
 def load_celebrities():
-    
     df = pd.read_excel(CELEB_PATH)
-    
     df.columns = df.columns.str.strip()
-    
-    # 保证 URL 为字符串
-    if "ImageURL" in df.columns:
-        df["ImageURL"] = df["ImageURL"].astype(str).str.strip()
-    
     return df
-
 
 celeb_df = load_celebrities()
 
 # ======================
-# Session state
+# Selector
 # ======================
 
-if "selected_celebrity" not in st.session_state:
-    st.session_state.selected_celebrity = None
+celebrity_list = celeb_df["Name"].dropna().tolist()
+
+selected_name = st.selectbox(
+    "Choose a celebrity",
+    celebrity_list
+)
 
 # ======================
-# Celebrity cards
+# Display celebrity info
 # ======================
 
-cols = st.columns(3)
+row = celeb_df[celeb_df["Name"] == selected_name].iloc[0]
 
-for i, row in celeb_df.iterrows():
+st.divider()
 
-    with cols[i % 3]:
+col1, col2 = st.columns([1,1])
 
-        name = row["Name"]
-        description = row["Description"]
-        style = row["Style Tags"]
-        image_url = row["ImageURL"]
+with col1:
 
-        st.subheader(name)
+    image_url = row["ImageURL"]
 
-        # 显示图片
-        if isinstance(image_url, str) and image_url.startswith("http"):
-            st.image(image_url, use_container_width=True)
-        else:
-            st.warning("Image not available")
+    if isinstance(image_url, str) and image_url.startswith("http"):
+        st.image(image_url, use_container_width=True)
+    else:
+        st.warning("Image not available")
 
-        # Style tags
-        st.caption(style)
+with col2:
 
-        # Description
-        st.write(description)
+    st.subheader(row["Name"])
 
-        # Select button
-        if st.button("Select", key=name):
+    st.write("Profession:", row["Profession"])
+    st.write("Nationality:", row["Nationality"])
 
-            st.session_state.selected_celebrity = name
-            st.success(f"Selected: {name}")
+    st.write("Style Tags")
+    st.caption(row["Style Tags"])
+
+    st.write("Description")
+    st.write(row["Description"])
 
 # ======================
-# Continue system
+# Save Celebrity
 # ======================
 
 st.divider()
 
-if st.session_state.selected_celebrity:
+if st.button("Save Celebrity"):
 
-    st.write("Selected Celebrity:", st.session_state.selected_celebrity)
+    st.session_state.selected_celebrity = selected_name
+
+    st.success(f"{selected_name} saved for styling")
+
+# ======================
+# Show saved celebrity
+# ======================
+
+if "selected_celebrity" in st.session_state:
+
+    st.write("Current styling target:", st.session_state.selected_celebrity)
+
+# ======================
+# Continue
+# ======================
+
+if "selected_celebrity" in st.session_state:
 
     if st.button("Continue to Clothing"):
 
         st.switch_page("pages/clothing.py")
-
-else:
-
-    st.info("Please select a celebrity to continue.")
-
-else:
-
-    st.info("Please select a celebrity to continue.")
-
