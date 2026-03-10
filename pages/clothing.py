@@ -4,29 +4,35 @@ import os
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
-st.set_page_config(page_title="Clothing Collection", layout="wide")
-st.title("New Collection")
+st.set_page_config(page_title="AI Fashion Styling", layout="wide")
+
+st.title("AI Fashion Styling Platform")
 
 # ======================
-# Favorites storage
+# Session state
 # ======================
+
 if "favorites" not in st.session_state:
     st.session_state.favorites = set()
+
+if "preview_item" not in st.session_state:
+    st.session_state.preview_item = None
+
+if "similar_items" not in st.session_state:
+    st.session_state.similar_items = None
+
 
 # ======================
 # Load dataset
 # ======================
+
 @st.cache_data
 def load_items():
-
     df = pd.read_csv("items.csv", encoding="utf-8-sig")
     df.columns = df.columns.str.strip()
-
     df["ItemID"] = df["ItemID"].astype(str)
     df = df[df["ItemID"] != "nan"]
-
     df = df.reset_index(drop=True)
-
     return df
 
 
@@ -35,6 +41,7 @@ df = load_items()
 # ======================
 # Load embeddings
 # ======================
+
 @st.cache_data
 def load_embeddings():
     return np.load("embeddings/clothing_embeddings.npy")
@@ -42,12 +49,29 @@ def load_embeddings():
 
 embeddings = load_embeddings()
 
-# 建立 ItemID → embedding index 映射
 item_index_map = {item: idx for idx, item in enumerate(df["ItemID"])}
+
+
+# ======================
+# Find image automatically
+# ======================
+
+def find_image(item_id):
+
+    extensions = [".jpg", ".jpeg", ".png", ".webp"]
+
+    for ext in extensions:
+        path = os.path.join("images", f"{item_id}{ext}")
+        if os.path.exists(path):
+            return path
+
+    return None
+
 
 # ======================
 # Sidebar Filters
 # ======================
+
 st.sidebar.header("Filters")
 
 brands = ["All"] + sorted(df["Brand"].dropna().unique().tolist())
@@ -58,9 +82,22 @@ brand_filter = st.sidebar.selectbox("Brand", brands)
 category_filter = st.sidebar.selectbox("Category", categories)
 color_filter = st.sidebar.selectbox("Color", colors)
 
+
+# ======================
+# Style Search
+# ======================
+
+st.sidebar.header("AI Style Search")
+
+style_query = st.sidebar.text_input("Search style (e.g. pink skirt, black dress)")
+
+search_btn = st.sidebar.button("Search")
+
+
 # ======================
 # Apply filters
 # ======================
+
 filtered_df = df.copy()
 
 if brand_filter != "All":
@@ -72,11 +109,47 @@ if category_filter != "All":
 if color_filter != "All":
     filtered_df = filtered_df[filtered_df["Color"] == color_filter]
 
-st.write(f"{len(filtered_df)} items found")
+
+# ======================
+# CLIP Style Search
+# ======================
+
+if search_btn and style_query != "":
+
+    st.subheader("Style Search Results")
+
+    # random demo vector (replace with CLIP text embedding later)
+    text_embedding = np.random.rand(1, embeddings.shape[1])
+
+    similarity = cosine_similarity(text_embedding, embeddings)[0]
+
+    top_indices = similarity.argsort()[::-1][:8]
+
+    cols = st.columns(4)
+
+    for i, idx in enumerate(top_indices):
+
+        item = df.iloc[idx]
+
+        with cols[i % 4]:
+
+            image = find_image(item["ItemID"])
+
+            if image:
+                st.image(image, use_container_width=True)
+
+            st.markdown(f"**{item['Brand']}**")
+            st.write(item["Name"])
+
+    st.divider()
+
 
 # ======================
 # Clothing Grid
 # ======================
+
+st.subheader(f"{len(filtered_df)} items found")
+
 cols = st.columns(4)
 
 for i, row in filtered_df.reset_index(drop=True).iterrows():
@@ -84,49 +157,108 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
     with cols[i % 4]:
 
         item_id = row["ItemID"]
-        image_path = os.path.join("images", f"{item_id}.jpg")
 
-        if os.path.exists(image_path):
-            st.image(image_path, use_container_width=True)
+        image = find_image(item_id)
+
+        if image:
+            if st.button("", key=f"img_{i}"):
+
+                st.session_state.preview_item = row
+
+            st.image(image, use_container_width=True)
 
         st.markdown(f"**{row['Brand']}**")
         st.write(row["Name"])
 
-        fav_key = f"fav_btn_{i}"
-        sim_key = f"sim_btn_{i}"
+        fav_key = f"fav_{i}"
+        sim_key = f"sim_{i}"
 
-        # Favorite
+        # ======================
+        # Favorites
+        # ======================
+
         if item_id in st.session_state.favorites:
+
             if st.button("❤️ Remove", key=fav_key):
                 st.session_state.favorites.remove(item_id)
+
         else:
+
             if st.button("🤍 Save", key=fav_key):
                 st.session_state.favorites.add(item_id)
 
         # ======================
         # Find Similar
         # ======================
+
         if st.button("Find Similar", key=sim_key):
 
             idx = item_index_map[item_id]
+
             query_embedding = embeddings[idx].reshape(1, -1)
 
             similarity = cosine_similarity(query_embedding, embeddings)[0]
-            top_indices = similarity.argsort()[::-1][1:5]
 
-            st.write("Similar items:")
+            top_indices = similarity.argsort()[::-1][1:9]
 
-            for j in top_indices:
+            st.session_state.similar_items = df.iloc[top_indices]
 
-                if j >= len(df):
-                    continue
 
-                sim_item = df.iloc[j]
-                sim_image = os.path.join("images", f"{sim_item['ItemID']}.jpg")
+# ======================
+# Similar Items Section
+# ======================
 
-                if os.path.exists(sim_image):
-                    st.image(sim_image, width=120)
+if st.session_state.similar_items is not None:
 
-                st.write(sim_item["Brand"], "-", sim_item["Name"])
+    st.subheader("Recommended Similar Items")
 
+    sim_df = st.session_state.similar_items
+
+    cols = st.columns(4)
+
+    for i, row in sim_df.iterrows():
+
+        with cols[i % 4]:
+
+            image = find_image(row["ItemID"])
+
+            if image:
+                st.image(image, use_container_width=True)
+
+            st.markdown(f"**{row['Brand']}**")
+            st.write(row["Name"])
+
+
+# ======================
+# Preview Modal
+# ======================
+
+if st.session_state.preview_item is not None:
+
+    st.divider()
+
+    item = st.session_state.preview_item
+
+    st.subheader("Item Preview")
+
+    col1, col2 = st.columns([1,1])
+
+    with col1:
+
+        image = find_image(item["ItemID"])
+
+        if image:
+            st.image(image, use_container_width=True)
+
+    with col2:
+
+        st.markdown(f"### {item['Brand']}")
+        st.write(item["Name"])
+
+        st.write("Category:", item["Category"])
+        st.write("Color:", item["Color"])
+
+        st.write("Season:", item["Season"])
+
+        st.button("Close Preview", on_click=lambda: st.session_state.update({"preview_item": None}))
 
