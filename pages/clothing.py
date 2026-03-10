@@ -40,32 +40,44 @@ if "similar_items" not in st.session_state:
 
 @st.cache_data
 def load_items():
+
     df = pd.read_csv(DATA_PATH, encoding="utf-8-sig")
+
     df.columns = df.columns.str.strip()
 
     if "No." in df.columns:
         df = df.drop(columns=["No."])
 
     df["ItemID"] = df["ItemID"].astype(str).str.strip()
+
     return df
+
 
 df = load_items()
 
 
 @st.cache_data
 def load_tags():
+
     if os.path.exists(TAGS_PATH):
+
         tags = pd.read_excel(TAGS_PATH)
+
         tags["ItemID"] = tags["ItemID"].astype(str).str.strip()
+
         return tags
+
     return pd.DataFrame(columns=["ItemID","TagType","Tag"])
+
 
 tags_df = load_tags()
 
 
 @st.cache_data
 def load_embeddings():
+
     return np.load(EMBED_PATH)
+
 
 embeddings = load_embeddings()
 
@@ -85,6 +97,7 @@ def get_image_url(item_id):
         url = f"{HF_BASE}{item_id}{ext}"
 
         try:
+
             r = requests.get(url)
 
             if r.status_code == 200:
@@ -94,7 +107,6 @@ def get_image_url(item_id):
             pass
 
     return "https://via.placeholder.com/400x500?text=No+Image"
-
 
 # ==============================
 # SIDEBAR
@@ -168,11 +180,7 @@ if style_filter:
     ]
 
 # ==============================
-# AI AGENT
-# ==============================
-
-# ==============================
-# AI AGENT (HUGGINGFACE)
+# AI STYLIST (HUGGINGFACE)
 # ==============================
 
 def ai_agent(filtered_items):
@@ -183,106 +191,105 @@ def ai_agent(filtered_items):
         return "⚠️ HuggingFace API key not configured."
 
     if len(filtered_items) == 0:
-        return "No clothing items match the selected filters."
+        return "No items match the selected filters."
 
-    # 提取可用信息
     brands = ", ".join(filtered_items["Brand"].unique()[:5])
     categories = ", ".join(filtered_items["Category"].unique()[:5])
     colors = ", ".join(filtered_items["Color"].unique()[:5])
 
-    occasions = ", ".join(occasion_filter) if occasion_filter else "Any"
-    styles = ", ".join(style_filter) if style_filter else "Any"
-
-    # celebrity style hints
     celebrity_style = {
-        "Jennie": "chic, feminine, luxury street style",
-        "Lisa": "bold, edgy, Y2K stage fashion",
-        "Zendaya": "high fashion, avant-garde red carpet",
-        "Taylor Swift": "elegant, vintage inspired",
-        "Rihanna": "experimental, statement fashion"
+
+        "Jennie":"chic luxury streetwear",
+        "Lisa":"bold Y2K stage fashion",
+        "Zendaya":"avant-garde red carpet fashion",
+        "Taylor Swift":"elegant vintage style",
+        "Rihanna":"experimental statement fashion"
+
     }
 
-    style_hint = celebrity_style.get(celebrity, "")
+    style_hint = celebrity_style.get(celebrity,"")
 
-    prompt = f"""
+    prompt=f"""
 You are a professional celebrity stylist.
 
 Celebrity: {celebrity}
-Celebrity fashion style: {style_hint}
+Celebrity style: {style_hint}
 
-User filters:
+Filters:
 Brand: {brand_multi}
 Category: {category_multi}
 Color: {color_multi}
-Occasion: {occasions}
-Style: {styles}
+Occasion: {occasion_filter}
+Style: {style_filter}
 
-Available clothing inventory:
+Available inventory:
 Brands: {brands}
 Categories: {categories}
 Colors: {colors}
 
-Based on the celebrity style and filters, recommend suitable clothing items
-and explain the styling reasoning in a concise way.
+Recommend suitable clothing pieces and explain the styling reasoning.
 """
 
-    headers = {
-        "Authorization": f"Bearer {api_key}"
-    }
+    headers={"Authorization":f"Bearer {api_key}"}
 
-    payload = {
-        "inputs": prompt,
-        "parameters": {
-            "max_new_tokens": 150,
-            "temperature": 0.7
+    payload={
+        "inputs":prompt,
+        "parameters":{
+            "max_new_tokens":150
         }
     }
 
+    response=requests.post(
+        "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta",
+        headers=headers,
+        json=payload
+    )
+
+    if response.status_code!=200:
+        return "AI stylist unavailable."
+
+    result=response.json()
+
     try:
-
-        response = requests.post(
-            "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta",
-            headers=headers,
-            json=payload,
-            timeout=60
-        )
-
-        if response.status_code != 200:
-            return f"⚠️ HuggingFace API error: {response.status_code}"
-
-        result = response.json()
-
-        if isinstance(result, list):
-            return result[0]["generated_text"]
-
+        return result[0]["generated_text"]
+    except:
         return str(result)
 
-    except Exception as e:
+# AI BUTTON
 
-        return f"⚠️ AI stylist unavailable: {e}"
+if st.sidebar.button("Generate AI Styling Advice"):
+
+    with st.sidebar.spinner("AI stylist thinking..."):
+
+        advice=ai_agent(filtered_df)
+
+    st.sidebar.success("Styling Advice")
+    st.sidebar.write(advice)
+
 # ==============================
 # GRID
 # ==============================
 
 st.subheader(f"{len(filtered_df)} items")
 
-cols = st.columns(4)
+cols=st.columns(4)
 
 for i,row in filtered_df.reset_index(drop=True).iterrows():
 
     with cols[i%4]:
 
-        item_id = row["ItemID"]
+        item_id=row["ItemID"]
 
-        image_url = get_image_url(item_id)
+        image_url=get_image_url(item_id)
 
         st.image(image_url,use_container_width=True)
 
         st.markdown(f"**{row['Brand']}**")
         st.write(row["Name"])
 
-        # TAGS
-        item_tags = tags_df[tags_df["ItemID"]==item_id]["Tag"].tolist()
+        # TAG
+
+        item_tags=tags_df[tags_df["ItemID"]==item_id]["Tag"].tolist()
 
         if item_tags:
             st.caption(" ".join([f"#{t}" for t in item_tags]))
@@ -314,33 +321,33 @@ for i,row in filtered_df.reset_index(drop=True).iterrows():
             st.session_state.similar_items=df.iloc[top_indices]
 
 # ==============================
-# SIMILAR MODAL
+# SIMILAR ITEMS PANEL
 # ==============================
 
 if st.session_state.similar_items is not None:
 
-    with st.container():
+    st.divider()
 
-        st.subheader("Recommended Similar Items")
+    st.subheader("Recommended Similar Items")
 
-        cols=st.columns(4)
+    cols=st.columns(4)
 
-        for i,row in st.session_state.similar_items.reset_index(drop=True).iterrows():
+    for i,row in st.session_state.similar_items.reset_index(drop=True).iterrows():
 
-            with cols[i%4]:
+        with cols[i%4]:
 
-                image_url=get_image_url(row["ItemID"])
+            image_url=get_image_url(row["ItemID"])
 
-                st.image(image_url,use_container_width=True)
+            st.image(image_url,use_container_width=True)
 
-                st.markdown(f"**{row['Brand']}**")
-                st.write(row["Name"])
+            st.markdown(f"**{row['Brand']}**")
+            st.write(row["Name"])
 
-        if st.button("Close Similar"):
-            st.session_state.similar_items=None
+    if st.button("Close Similar"):
+        st.session_state.similar_items=None
 
 # ==============================
-# PREVIEW MODAL
+# PREVIEW
 # ==============================
 
 if st.session_state.preview_item is not None:
@@ -367,11 +374,10 @@ if st.session_state.preview_item is not None:
         st.write("Color:",item["Color"])
         st.write("Season:",item["Season"])
 
-        item_tags = tags_df[tags_df["ItemID"]==item["ItemID"]]["Tag"].tolist()
+        item_tags=tags_df[tags_df["ItemID"]==item["ItemID"]]["Tag"].tolist()
 
         if item_tags:
             st.write("Tags:",", ".join(item_tags))
 
         if st.button("Close Preview"):
             st.session_state.preview_item=None
-
