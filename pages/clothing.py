@@ -18,6 +18,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_PATH = os.path.join(BASE_DIR, "items.csv")
 EMBED_PATH = os.path.join(BASE_DIR, "embeddings", "clothing_embeddings.npy")
 TAGS_PATH = os.path.join(BASE_DIR, "tags.xlsx")
+CELEB_PATH = os.path.join(BASE_DIR, "celebrities.xlsx")
 
 HF_BASE = "https://huggingface.co/datasets/sherry2026/fashion-clothing-dataset/resolve/main/"
 
@@ -55,6 +56,9 @@ def load_items():
 
 df = load_items()
 
+# ==============================
+# LOAD TAGS
+# ==============================
 
 @st.cache_data
 def load_tags():
@@ -72,6 +76,29 @@ def load_tags():
 
 tags_df = load_tags()
 
+# ==============================
+# LOAD CELEBRITIES
+# ==============================
+
+@st.cache_data
+def load_celebrities():
+
+    if os.path.exists(CELEB_PATH):
+
+        df = pd.read_excel(CELEB_PATH)
+
+        df.columns = df.columns.str.strip()
+
+        return df
+
+    return pd.DataFrame(columns=["Celebrity","Style","Description"])
+
+
+celeb_df = load_celebrities()
+
+# ==============================
+# LOAD EMBEDDINGS
+# ==============================
 
 @st.cache_data
 def load_embeddings():
@@ -137,12 +164,13 @@ style_tags = tags_df[tags_df["TagType"]=="Style"]["Tag"].unique()
 occasion_filter = st.sidebar.multiselect("Occasion",sorted(occasion_tags))
 style_filter = st.sidebar.multiselect("Style",sorted(style_tags))
 
-# Celebrity selector
+# ==============================
+# CELEBRITY SELECTOR
+# ==============================
 
-celebrity = st.sidebar.selectbox(
-    "Celebrity",
-    ["Jennie","Lisa","Zendaya","Taylor Swift","Rihanna"]
-)
+celebrity_list = celeb_df["Celebrity"].dropna().unique().tolist()
+
+celebrity = st.sidebar.selectbox("Celebrity",celebrity_list)
 
 # ==============================
 # APPLY FILTER
@@ -180,7 +208,24 @@ if style_filter:
     ]
 
 # ==============================
-# AI STYLIST (HUGGINGFACE)
+# GET CELEBRITY STYLE
+# ==============================
+
+def get_celebrity_style(name):
+
+    row = celeb_df[celeb_df["Celebrity"] == name]
+
+    if len(row) > 0:
+
+        style = row.iloc[0]["Style"]
+        description = row.iloc[0]["Description"]
+
+        return style, description
+
+    return "", ""
+
+# ==============================
+# AI STYLIST
 # ==============================
 
 def ai_agent(filtered_items):
@@ -191,43 +236,37 @@ def ai_agent(filtered_items):
         return "⚠️ HuggingFace API key not configured."
 
     if len(filtered_items) == 0:
-        return "No items match the selected filters."
+        return "No clothing items match the selected filters."
+
+    style_hint, celeb_description = get_celebrity_style(celebrity)
 
     brands = ", ".join(filtered_items["Brand"].unique()[:5])
     categories = ", ".join(filtered_items["Category"].unique()[:5])
     colors = ", ".join(filtered_items["Color"].unique()[:5])
 
-    celebrity_style = {
-
-        "Jennie":"chic luxury streetwear",
-        "Lisa":"bold Y2K stage fashion",
-        "Zendaya":"avant-garde red carpet fashion",
-        "Taylor Swift":"elegant vintage style",
-        "Rihanna":"experimental statement fashion"
-
-    }
-
-    style_hint = celebrity_style.get(celebrity,"")
-
     prompt=f"""
 You are a professional celebrity stylist.
 
 Celebrity: {celebrity}
+
 Celebrity style: {style_hint}
 
-Filters:
+Style description:
+{celeb_description}
+
+User Filters:
 Brand: {brand_multi}
 Category: {category_multi}
 Color: {color_multi}
 Occasion: {occasion_filter}
 Style: {style_filter}
 
-Available inventory:
+Available clothing inventory:
 Brands: {brands}
 Categories: {categories}
 Colors: {colors}
 
-Recommend suitable clothing pieces and explain the styling reasoning.
+Recommend suitable clothing pieces and explain why they match the celebrity style.
 """
 
     headers={"Authorization":f"Bearer {api_key}"}
@@ -255,7 +294,9 @@ Recommend suitable clothing pieces and explain the styling reasoning.
     except:
         return str(result)
 
+# ==============================
 # AI BUTTON
+# ==============================
 
 if st.sidebar.button("Generate AI Styling Advice"):
 
@@ -286,8 +327,6 @@ for i,row in filtered_df.reset_index(drop=True).iterrows():
 
         st.markdown(f"**{row['Brand']}**")
         st.write(row["Name"])
-
-        # TAG
 
         item_tags=tags_df[tags_df["ItemID"]==item_id]["Tag"].tolist()
 
@@ -321,7 +360,7 @@ for i,row in filtered_df.reset_index(drop=True).iterrows():
             st.session_state.similar_items=df.iloc[top_indices]
 
 # ==============================
-# SIMILAR ITEMS PANEL
+# SIMILAR
 # ==============================
 
 if st.session_state.similar_items is not None:
@@ -381,3 +420,6 @@ if st.session_state.preview_item is not None:
 
         if st.button("Close Preview"):
             st.session_state.preview_item=None
+        if st.button("Close Preview"):
+            st.session_state.preview_item=None
+
