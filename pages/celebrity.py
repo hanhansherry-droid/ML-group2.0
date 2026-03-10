@@ -5,7 +5,6 @@ import os
 st.set_page_config(page_title="Select Celebrity", layout="wide")
 
 st.title("AI Fashion Stylist")
-
 st.subheader("Select Celebrity")
 
 # ======================
@@ -21,8 +20,13 @@ CELEB_PATH = os.path.join(BASE_DIR, "celebrities.xlsx")
 
 @st.cache_data
 def load_celebrities():
+
     df = pd.read_excel(CELEB_PATH)
     df.columns = df.columns.str.strip()
+
+    # ⭐ 关键修复
+    df["ImageURL"] = df["ImageURL"].astype(str).str.strip()
+
     return df
 
 celeb_df = load_celebrities()
@@ -39,7 +43,7 @@ selected_name = st.selectbox(
 )
 
 # ======================
-# Display celebrity info
+# Display info
 # ======================
 
 row = celeb_df[celeb_df["Name"] == selected_name].iloc[0]
@@ -52,7 +56,9 @@ with col1:
 
     image_url = row["ImageURL"]
 
-    if isinstance(image_url, str) and image_url.startswith("http"):
+    st.write("DEBUG URL:", image_url)   # 用来确认URL
+
+    if image_url.startswith("http"):
         st.image(image_url, use_container_width=True)
     else:
         st.warning("Image not available")
@@ -79,22 +85,11 @@ st.divider()
 if st.button("Save Celebrity"):
 
     st.session_state.selected_celebrity = selected_name
-
     st.success(f"{selected_name} saved for styling")
-
-# ======================
-# Show saved celebrity
-# ======================
 
 if "selected_celebrity" in st.session_state:
 
     st.write("Current styling target:", st.session_state.selected_celebrity)
-
-# ======================
-# Continue
-# ======================
-
-if "selected_celebrity" in st.session_state:
 
     if st.button("Continue to Clothing"):
 
