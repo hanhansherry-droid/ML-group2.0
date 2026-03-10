@@ -12,9 +12,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 st.set_page_config(page_title="Fashion Collection", layout="wide")
 st.title("Fashion Collection")
 
-# ==============================
+
 # PATH
-# ==============================
+
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -25,9 +25,9 @@ CELEB_PATH = os.path.join(BASE_DIR,"celebrities.xlsx")
 
 HF_BASE = "https://huggingface.co/datasets/sherry2026/fashion-clothing-dataset/resolve/main/"
 
-# ==============================
+
 # SESSION
-# ==============================
+
 
 if "favorites" not in st.session_state:
     st.session_state.favorites=set()
@@ -41,9 +41,9 @@ if "similar_items" not in st.session_state:
 if "ai_mode" not in st.session_state:
     st.session_state.ai_mode=False
 
-# ==============================
+
 # LOAD CLIP
-# ==============================
+
 
 @st.cache_resource
 def load_clip():
@@ -56,9 +56,9 @@ def load_clip():
 
 model,preprocess,device=load_clip()
 
-# ==============================
+
 # LOAD DATA
-# ==============================
+
 
 @st.cache_data
 def load_items():
@@ -104,9 +104,8 @@ def load_celebrities():
 
 celeb_df=load_celebrities()
 
-# ==============================
+
 # EMBEDDINGS
-# ==============================
 
 @st.cache_data
 def load_embeddings():
@@ -116,9 +115,9 @@ embeddings=load_embeddings()
 
 item_index_map={item:idx for idx,item in enumerate(df["ItemID"])}
 
-# ==============================
+
 # CELEBRITY
-# ==============================
+
 
 selected_celebrity=st.session_state.get("selected_celebrity")
 
@@ -148,9 +147,9 @@ style_tags=get_celebrity_style(selected_celebrity)
 st.sidebar.subheader("Celebrity Style")
 st.sidebar.write(style_tags)
 
-# ==============================
+
 # AI IMAGE SEARCH
-# ==============================
+
 
 st.sidebar.divider()
 st.sidebar.header("AI Image Search")
@@ -163,9 +162,9 @@ type=["jpg","jpeg","png","webp"]
 run_ai=st.sidebar.button("Run AI Search")
 clear_ai=st.sidebar.button("Clear AI")
 
-# ==============================
+
 # LABEL LIST
-# ==============================
+
 
 style_labels=["elegant","streetwear","sporty","minimal","luxury"]
 
@@ -175,9 +174,9 @@ color_labels=["black","white","red","pink","blue","beige"]
 
 pattern_labels=["floral","striped","solid","graphic"]
 
-# ==============================
+
 # PREDICT FUNCTION
-# ==============================
+
 
 def predict(query_embedding,labels):
 
@@ -194,9 +193,8 @@ def predict(query_embedding,labels):
 
     return labels[np.argmax(sim)]
 
-# ==============================
 # RUN AI
-# ==============================
+
 
 query_embedding=None
 
@@ -224,9 +222,9 @@ if uploaded_image and run_ai:
 if clear_ai:
     st.session_state.ai_mode=False
 
-# ==============================
+
 # SIDEBAR FILTERS
-# ==============================
+
 
 st.sidebar.header("Filters")
 
@@ -245,9 +243,9 @@ color_multi=st.sidebar.multiselect(
 sorted(df["Color"].dropna().unique())
 )
 
-# ==============================
+
 # APPLY FILTER
-# ==============================
+
 
 filtered_df=df.copy()
 
@@ -260,9 +258,9 @@ if category_multi:
 if color_multi:
     filtered_df=filtered_df[filtered_df["Color"].isin(color_multi)]
 
-# ==============================
+
 # AI FILTER
-# ==============================
+
 
 if st.session_state.ai_mode:
 
@@ -296,9 +294,9 @@ if st.session_state.ai_mode:
 
             filtered_df=df.iloc[top_indices]
 
-# ==============================
+
 # CELEBRITY STYLE BOOST
-# ==============================
+
 
 if style_tags:
 
@@ -312,9 +310,9 @@ if style_tags:
 
     filtered_df=pd.concat([celeb_df_filtered,filtered_df]).drop_duplicates()
 
-# ==============================
+
 # IMAGE URL
-# ==============================
+
 
 @st.cache_data
 def get_image_url(item_id):
@@ -337,9 +335,8 @@ def get_image_url(item_id):
 
     return "https://via.placeholder.com/400x500?text=No+Image"
 
-# ==============================
+
 # GRID
-# ==============================
 
 st.subheader(f"{len(filtered_df)} items")
 
@@ -405,9 +402,8 @@ for i,row in filtered_df.reset_index(drop=True).iterrows():
 
                 st.session_state.similar_items=df.iloc[top_indices]
 
-# ==============================
+
 # SIMILAR
-# ==============================
 
 if st.session_state.similar_items is not None:
 
@@ -430,3 +426,4 @@ if st.session_state.similar_items is not None:
     if st.button("Close Similar"):
 
         st.session_state.similar_items=None
+
