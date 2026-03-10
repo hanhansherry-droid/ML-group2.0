@@ -1,8 +1,9 @@
-streamlit==1.32.2
-pandas==2.2.2
-numpy==1.26.4
-scikit-learn==1.4.2
-pillow==10.2.0
-openpyxl==3.1.2
-requests==2.31.0
-clip-anytorch==2.6.0
+streamlit
+pandas
+numpy
+scikit-learn
+pillow
+openpyxl
+requests
+setuptools
+clip-anytorch
