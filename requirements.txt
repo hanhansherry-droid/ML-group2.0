@@ -6,3 +6,4 @@ Pillow
 requests
 torch
 git+https://github.com/openai/CLIP.git
+openpyxl
