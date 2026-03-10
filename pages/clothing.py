@@ -85,7 +85,7 @@ def get_image_url(item_id):
         url = f"{HF_BASE}{item_id}{ext}"
 
         try:
-            r = requests.head(url)
+            r = requests.get(url)
 
             if r.status_code == 200:
                 return url
@@ -94,8 +94,6 @@ def get_image_url(item_id):
             pass
 
     return "https://via.placeholder.com/400x500?text=No+Image"
-
-
 # ==============================
 # SIDEBAR FILTERS
 # ==============================
@@ -237,4 +235,5 @@ if st.session_state.preview_item is not None:
 
         if st.button("Close Preview"):
             st.session_state.preview_item = None
+
 
