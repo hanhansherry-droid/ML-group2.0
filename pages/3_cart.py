@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
+import os
 from collections import defaultdict
+
+st.set_page_config(page_title="Saved Looks", layout="wide")
 
 st.title("🛍 Saved Looks")
 
@@ -11,6 +14,7 @@ st.title("🛍 Saved Looks")
 cart = st.session_state.get("cart", [])
 
 if len(cart) == 0:
+
     st.info("No items saved yet.")
 
 else:
@@ -27,13 +31,13 @@ else:
             st.markdown(f"**{item['Brand']}**")
             st.write(item["Name"])
 
-            st.write("Note:", item["note"])
+            note = item.get("note","")
+            st.write("Note:", note)
 
-            if st.button("Remove", key=f"remove_{i}"):
+            if st.button("Remove", key=f"remove_cart_{i}"):
 
                 st.session_state.cart.pop(i)
                 st.rerun()
-
 
 # ==============================
 # LOAD BRAND CONTACTS
@@ -42,11 +46,20 @@ else:
 st.divider()
 st.subheader("Brand Contacts")
 
-CONTACT_PATH = "brand_contacts.xlsx"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CONTACT_PATH = os.path.join(BASE_DIR, "brand_contacts.xlsx")
 
 @st.cache_data
 def load_contacts():
-    return pd.read_excel(CONTACT_PATH)
+
+    if os.path.exists(CONTACT_PATH):
+
+        df = pd.read_excel(CONTACT_PATH)
+        df.columns = df.columns.str.strip()
+
+        return df
+
+    return pd.DataFrame(columns=["brand","contact_name","email"])
 
 contacts = load_contacts()
 
@@ -83,7 +96,6 @@ if len(cart) > 0:
 
             st.warning("No contact information found for this brand.")
 
-
 # ==============================
 # REQUEST SAMPLE EMAIL
 # ==============================
@@ -92,9 +104,10 @@ st.divider()
 
 if len(cart) > 0:
 
-    if st.button("Request Samples"):
+    if st.button("Request Samples", key="request_samples"):
 
         # send cart items to email page
         st.session_state.email_items = st.session_state.cart
 
-        st.switch_page("pages/email.py")
+        # 跳转到 email page
+        st.switch_page("pages/4_email.py")
