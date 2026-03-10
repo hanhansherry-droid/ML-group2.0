@@ -72,7 +72,7 @@ embeddings = load_embeddings()
 item_index_map = {item: idx for idx, item in enumerate(df["ItemID"])}
 
 # ==============================
-# IMAGE URL (AUTO DETECT EXT)
+# IMAGE URL (不要改)
 # ==============================
 
 @st.cache_data
@@ -95,7 +95,6 @@ def get_image_url(item_id):
 
     return "https://via.placeholder.com/400x500?text=No+Image"
 
-
 # ==============================
 # SIDEBAR FILTERS (MULTI)
 # ==============================
@@ -105,26 +104,20 @@ st.sidebar.header("Filters")
 brand_multi = st.sidebar.multiselect(
     "Brand",
     options=sorted(df["Brand"].dropna().unique()),
-    default=st.session_state.get("brand_multi", [])
+    default=[]
 )
 
 category_multi = st.sidebar.multiselect(
     "Category",
     options=sorted(df["Category"].dropna().unique()),
-    default=st.session_state.get("category_multi", [])
+    default=[]
 )
 
 color_multi = st.sidebar.multiselect(
     "Color",
     options=sorted(df["Color"].dropna().unique()),
-    default=st.session_state.get("color_multi", [])
+    default=[]
 )
-
-# 保存选择状态
-st.session_state["brand_multi"] = brand_multi
-st.session_state["category_multi"] = category_multi
-st.session_state["color_multi"] = color_multi
-
 
 # ==============================
 # APPLY FILTERS
@@ -139,8 +132,47 @@ if len(category_multi) > 0:
     filtered_df = filtered_df[filtered_df["Category"].isin(category_multi)]
 
 if len(color_multi) > 0:
-    filtered_df = filtered_df[filtered_df["Color"].isin(color_multi])
+    filtered_df = filtered_df[filtered_df["Color"].isin(color_multi)]
 
+# ==============================
+# AI STYLIST AGENT
+# ==============================
+
+def ai_stylist_agent(filtered_items):
+
+    if len(filtered_items) == 0:
+        return "No items match the selected filters."
+
+    brands = filtered_items["Brand"].unique()
+    categories = filtered_items["Category"].unique()
+    colors = filtered_items["Color"].unique()
+
+    text = f"""
+    AI Stylist Insight:
+
+    This selection highlights {len(filtered_items)} curated fashion items.
+
+    Brands included: {", ".join(brands[:5])}
+
+    Categories: {", ".join(categories)}
+
+    Dominant colors: {", ".join(colors)}
+
+    Styling suggestion:
+    Combine statement pieces with neutral layers to create a balanced runway-inspired look.
+    """
+
+    return text
+
+
+st.sidebar.divider()
+st.sidebar.subheader("AI Stylist")
+
+if st.sidebar.button("Generate Styling Advice"):
+
+    advice = ai_stylist_agent(filtered_df)
+
+    st.sidebar.write(advice)
 
 # ==============================
 # CLOTHING GRID
@@ -195,7 +227,6 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
 
             st.session_state.similar_items = df.iloc[top_indices]
 
-
 # ==============================
 # SIMILAR ITEMS
 # ==============================
@@ -220,7 +251,6 @@ if st.session_state.similar_items is not None:
 
             st.markdown(f"**{row['Brand']}**")
             st.write(row["Name"])
-
 
 # ==============================
 # PREVIEW SECTION
@@ -250,9 +280,6 @@ if st.session_state.preview_item is not None:
         st.write("Category:", item["Category"])
         st.write("Color:", item["Color"])
         st.write("Season:", item["Season"])
-
-        if st.button("Close Preview"):
-            st.session_state.preview_item = None
 
         if st.button("Close Preview"):
             st.session_state.preview_item = None
