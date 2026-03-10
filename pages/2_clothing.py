@@ -66,14 +66,12 @@ def load_tags():
     if os.path.exists(TAGS_PATH):
 
         tags = pd.read_excel(TAGS_PATH)
-
         tags.columns = tags.columns.str.strip()
-
         tags["ItemID"] = tags["ItemID"].astype(str).str.strip()
 
         return tags
 
-    return pd.DataFrame(columns=["ItemID", "TagType", "Tag"])
+    return pd.DataFrame(columns=["ItemID","TagType","Tag"])
 
 tags_df = load_tags()
 
@@ -87,7 +85,6 @@ def load_celebrities():
     if os.path.exists(CELEB_PATH):
 
         df = pd.read_excel(CELEB_PATH)
-
         df.columns = df.columns.str.strip()
 
         return df
@@ -106,15 +103,15 @@ if selected_celebrity is None:
 
     st.warning("Please select a celebrity first.")
 
-    if st.button("Go to Celebrity Page"):
-        st.switch_page("pages/celebrity.py")
+    if st.button("Go to Celebrity Page", key="go_celeb"):
+        st.switch_page("pages/1_celebrity.py")
 
     st.stop()
 
 st.success(f"Styling for: {selected_celebrity}")
 
 # ==============================
-# GET CELEBRITY STYLE
+# CELEBRITY STYLE
 # ==============================
 
 def get_celebrity_style(name):
@@ -133,7 +130,6 @@ def get_celebrity_style(name):
 style_tags, celebrity_description = get_celebrity_style(selected_celebrity)
 
 st.sidebar.subheader("Celebrity Style")
-
 st.sidebar.write(style_tags)
 
 # ==============================
@@ -163,7 +159,7 @@ def get_image_url(item_id):
 
         try:
 
-            r = requests.get(url)
+            r = requests.get(url, timeout=3)
 
             if r.status_code == 200:
                 return url
@@ -187,22 +183,18 @@ if len(cart) == 0:
 for i,item in enumerate(cart):
 
     st.sidebar.image(item["ImageURL"], width=80)
-
     st.sidebar.markdown(f"**{item['Brand']}**")
-
     st.sidebar.caption(item["Name"])
 
     if st.sidebar.button("Remove", key=f"sidebar_remove_{i}"):
 
         st.session_state.cart.pop(i)
-
         st.rerun()
 
 st.sidebar.divider()
 
-if st.sidebar.button("Open Cart"):
-
-    st.switch_page("pages/cart.py")
+if st.sidebar.button("Open Cart", key="open_cart"):
+    st.switch_page("pages/3_cart.py")
 
 # ==============================
 # FILTERS
@@ -249,13 +241,11 @@ if color_multi:
 if occasion_filter:
 
     item_ids = tags_df[tags_df["Tag"].isin(occasion_filter)]["ItemID"].unique()
-
     filtered_df = filtered_df[filtered_df["ItemID"].isin(item_ids)]
 
 if style_filter:
 
     item_ids = tags_df[tags_df["Tag"].isin(style_filter)]["ItemID"].unique()
-
     filtered_df = filtered_df[filtered_df["ItemID"].isin(item_ids)]
 
 # ==============================
@@ -277,7 +267,6 @@ for i,row in filtered_df.reset_index(drop=True).iterrows():
         st.image(image_url, use_container_width=True)
 
         st.markdown(f"**{row['Brand']}**")
-
         st.write(row["Name"])
 
         item_tags = tags_df[tags_df["ItemID"]==item_id]["Tag"].tolist()
@@ -285,17 +274,13 @@ for i,row in filtered_df.reset_index(drop=True).iterrows():
         if item_tags:
             st.caption(" ".join([f"#{t}" for t in item_tags]))
 
-        fav_key = f"fav_{item_id}"
-        sim_key = f"sim_{item_id}"
-        preview_key = f"preview_{item_id}"
-
-        if st.button("Preview", key=preview_key):
+        if st.button("Preview", key=f"preview_{item_id}"):
 
             st.session_state.preview_item = row
 
         if item_id in st.session_state.favorites:
 
-            if st.button("❤️ Remove", key=fav_key):
+            if st.button("❤️ Remove", key=f"fav_{item_id}"):
 
                 st.session_state.favorites.remove(item_id)
 
@@ -308,7 +293,7 @@ for i,row in filtered_df.reset_index(drop=True).iterrows():
 
         else:
 
-            if st.button("🤍 Save", key=fav_key):
+            if st.button("🤍 Save", key=f"fav_{item_id}"):
 
                 st.session_state.favorites.add(item_id)
 
@@ -324,17 +309,18 @@ for i,row in filtered_df.reset_index(drop=True).iterrows():
 
                 st.rerun()
 
-        if st.button("Find Similar", key=sim_key):
+        if st.button("Find Similar", key=f"sim_{item_id}"):
 
-            idx = item_index_map[item_id]
+            idx = item_index_map.get(item_id)
 
-            query_embedding = embeddings[idx].reshape(1,-1)
+            if idx is not None:
 
-            similarity = cosine_similarity(query_embedding, embeddings)[0]
+                query_embedding = embeddings[idx].reshape(1,-1)
+                similarity = cosine_similarity(query_embedding, embeddings)[0]
 
-            top_indices = similarity.argsort()[::-1][1:9]
+                top_indices = similarity.argsort()[::-1][1:9]
 
-            st.session_state.similar_items = df.iloc[top_indices]
+                st.session_state.similar_items = df.iloc[top_indices]
 
 # ==============================
 # SIMILAR
@@ -357,48 +343,9 @@ if st.session_state.similar_items is not None:
             st.image(image_url, use_container_width=True)
 
             st.markdown(f"**{row['Brand']}**")
-
             st.write(row["Name"])
 
-    if st.button("Close Similar"):
+    if st.button("Close Similar", key="close_similar"):
 
         st.session_state.similar_items = None
-
-# ==============================
-# PREVIEW
-# ==============================
-
-if st.session_state.preview_item is not None:
-
-    item = st.session_state.preview_item
-
-    st.divider()
-
-    st.subheader("Item Preview")
-
-    col1,col2 = st.columns([1,1])
-
-    with col1:
-
-        image_url = get_image_url(item["ItemID"])
-
-        st.image(image_url, use_container_width=True)
-
-    with col2:
-
-        st.markdown(f"### {item['Brand']}")
-
-        st.write(item["Name"])
-
-        st.write("Category:", item["Category"])
-
-        st.write("Color:", item["Color"])
-
-        st.write("Season:", item["Season"])
-
-        item_tags = tags_df[tags_df["ItemID"]==item["ItemID"]]["Tag"].tolist()
-
-        if item_tags:
-
-            st.write("Tags:", ", ".join(item_tags))
 
