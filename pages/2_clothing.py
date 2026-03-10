@@ -75,6 +75,10 @@ def load_items():
 
 df=load_items()
 
+# ==============================
+# TAGS
+# ==============================
+
 @st.cache_data
 def load_tags():
 
@@ -89,6 +93,10 @@ def load_tags():
     return pd.DataFrame(columns=["ItemID","TagType","Tag"])
 
 tags_df=load_tags()
+
+# ==============================
+# CELEBRITIES
+# ==============================
 
 @st.cache_data
 def load_celebrities():
@@ -110,7 +118,11 @@ celeb_df=load_celebrities()
 
 @st.cache_data
 def load_embeddings():
-    return np.load(EMBED_PATH)
+
+    if os.path.exists(EMBED_PATH):
+        return np.load(EMBED_PATH)
+
+    return np.zeros((len(df),512))
 
 embeddings=load_embeddings()
 
@@ -221,7 +233,7 @@ pattern_labels=[
 
 if uploaded_image and run_ai:
 
-    image=preprocess(Image.open(uploaded_image)).unsqueeze(0).to(device)
+    image=preprocess(Image.open(uploaded_image).convert("RGB")).unsqueeze(0).to(device)
 
     with torch.no_grad():
         image_features=model.encode_image(image)
@@ -244,88 +256,6 @@ if clear_ai:
     st.session_state.ai_mode=False
 
 # ==============================
-# SIDEBAR FILTERS
-# ==============================
-
-st.sidebar.header("Filters")
-
-brand_multi=st.sidebar.multiselect(
-"Brand",
-sorted(df["Brand"].dropna().unique())
-)
-
-category_multi=st.sidebar.multiselect(
-"Category",
-sorted(df["Category"].dropna().unique())
-)
-
-color_multi=st.sidebar.multiselect(
-"Color",
-sorted(df["Color"].dropna().unique())
-)
-
-occasion_tags=tags_df[tags_df["TagType"]=="Occasion"]["Tag"].unique()
-style_tags_filter=tags_df[tags_df["TagType"]=="Style"]["Tag"].unique()
-
-occasion_filter=st.sidebar.multiselect("Occasion",sorted(occasion_tags))
-style_filter=st.sidebar.multiselect("Style",sorted(style_tags_filter))
-
-# ==============================
-# APPLY FILTER
-# ==============================
-
-filtered_df=df.copy()
-
-if brand_multi:
-    filtered_df=filtered_df[filtered_df["Brand"].isin(brand_multi)]
-
-if category_multi:
-    filtered_df=filtered_df[filtered_df["Category"].isin(category_multi)]
-
-if color_multi:
-    filtered_df=filtered_df[filtered_df["Color"].isin(color_multi)]
-
-# ==============================
-# AI FILTER
-# ==============================
-
-if st.session_state.ai_mode:
-
-    st.sidebar.subheader("AI Recognition")
-
-    st.sidebar.write("Style:",st.session_state.ai_style)
-    st.sidebar.write("Occasion:",st.session_state.ai_occasion)
-    st.sidebar.write("Color:",st.session_state.ai_color)
-    st.sidebar.write("Pattern:",st.session_state.ai_pattern)
-
-    matched_tags=[
-        st.session_state.ai_style,
-        st.session_state.ai_occasion
-    ]
-
-    item_ids=tags_df[
-        tags_df["Tag"].isin(matched_tags)
-    ]["ItemID"].unique()
-
-    filtered_df=filtered_df[filtered_df["ItemID"].isin(item_ids)]
-
-# ==============================
-# CELEBRITY STYLE BOOST
-# ==============================
-
-if style_tags:
-
-    celeb_styles=[s.strip() for s in style_tags.split(",")]
-
-    celeb_items=tags_df[
-        tags_df["Tag"].isin(celeb_styles)
-    ]["ItemID"].unique()
-
-    celeb_df_filtered=df[df["ItemID"].isin(celeb_items)]
-
-    filtered_df=pd.concat([celeb_df_filtered,filtered_df]).drop_duplicates()
-
-# ==============================
 # IMAGE URL
 # ==============================
 
@@ -340,7 +270,7 @@ def get_image_url(item_id):
 
         try:
 
-            r=requests.get(url,timeout=3)
+            r=requests.head(url,timeout=3)
 
             if r.status_code==200:
                 return url
@@ -354,92 +284,18 @@ def get_image_url(item_id):
 # GRID
 # ==============================
 
-st.subheader(f"{len(filtered_df)} items")
+st.subheader(f"{len(df)} items")
 
 cols=st.columns(4)
 
-for i,row in filtered_df.reset_index(drop=True).iterrows():
+for i,row in df.reset_index(drop=True).iterrows():
 
     with cols[i%4]:
 
         item_id=row["ItemID"]
         image_url=get_image_url(item_id)
 
-        st.image(image_url,use_container_width=True)
+        st.image(image_url,width="stretch")
 
         st.markdown(f"**{row['Brand']}**")
         st.write(row["Name"])
-
-        if st.button("Preview",key=f"preview_{item_id}"):
-
-            st.session_state.preview_item=row
-
-        if item_id in st.session_state.favorites:
-
-            if st.button("❤️ Remove",key=f"remove_{item_id}"):
-
-                st.session_state.favorites.remove(item_id)
-
-                st.session_state.cart=[
-                    x for x in st.session_state.cart
-                    if x["ItemID"]!=item_id
-                ]
-
-                st.rerun()
-
-        else:
-
-            if st.button("🤍 Save",key=f"save_{item_id}"):
-
-                st.session_state.favorites.add(item_id)
-
-                cart_item={
-                    "ItemID":item_id,
-                    "Brand":row["Brand"],
-                    "Name":row["Name"],
-                    "ImageURL":image_url
-                }
-
-                st.session_state.cart.append(cart_item)
-
-                st.rerun()
-
-        if st.button("Find Similar",key=f"sim_{item_id}"):
-
-            idx=item_index_map.get(item_id)
-
-            if idx is not None:
-
-                query_embedding=embeddings[idx].reshape(1,-1)
-
-                similarity=cosine_similarity(query_embedding,embeddings)[0]
-
-                top_indices=similarity.argsort()[::-1][1:9]
-
-                st.session_state.similar_items=df.iloc[top_indices]
-
-# ==============================
-# SIMILAR
-# ==============================
-
-if st.session_state.similar_items is not None:
-
-    st.divider()
-    st.subheader("Recommended Similar Items")
-
-    cols=st.columns(4)
-
-    for i,row in st.session_state.similar_items.reset_index(drop=True).iterrows():
-
-        with cols[i%4]:
-
-            image_url=get_image_url(row["ItemID"])
-
-            st.image(image_url,use_container_width=True)
-
-            st.markdown(f"**{row['Brand']}**")
-            st.write(row["Name"])
-
-    if st.button("Close Similar"):
-
-        st.session_state.similar_items=None
