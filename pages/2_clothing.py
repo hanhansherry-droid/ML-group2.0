@@ -3,6 +3,10 @@ import pandas as pd
 import numpy as np
 import os
 import requests
+import torch
+import clip
+
+from PIL import Image
 from sklearn.metrics.pairwise import cosine_similarity
 
 st.set_page_config(page_title="Fashion Collection", layout="wide")
@@ -38,6 +42,21 @@ if "similar_items" not in st.session_state:
     st.session_state.similar_items = None
 
 # ==============================
+# LOAD CLIP
+# ==============================
+
+@st.cache_resource
+def load_clip():
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model, preprocess = clip.load("ViT-B/32", device=device)
+
+    return model, preprocess, device
+
+
+model, preprocess, device = load_clip()
+
+# ==============================
 # LOAD ITEMS
 # ==============================
 
@@ -53,6 +72,7 @@ def load_items():
     df["ItemID"] = df["ItemID"].astype(str).str.strip()
 
     return df
+
 
 df = load_items()
 
@@ -73,6 +93,7 @@ def load_tags():
 
     return pd.DataFrame(columns=["ItemID","TagType","Tag"])
 
+
 tags_df = load_tags()
 
 # ==============================
@@ -91,6 +112,7 @@ def load_celebrities():
 
     return pd.DataFrame(columns=["Name","Description","Style Tags"])
 
+
 celeb_df = load_celebrities()
 
 # ==============================
@@ -103,7 +125,7 @@ if selected_celebrity is None:
 
     st.warning("Please select a celebrity first.")
 
-    if st.button("Go to Celebrity Page", key="go_celeb"):
+    if st.button("Go to Celebrity Page"):
         st.switch_page("pages/1_celebrity.py")
 
     st.stop()
@@ -127,6 +149,7 @@ def get_celebrity_style(name):
 
     return "", ""
 
+
 style_tags, celebrity_description = get_celebrity_style(selected_celebrity)
 
 st.sidebar.subheader("Celebrity Style")
@@ -140,9 +163,82 @@ st.sidebar.write(style_tags)
 def load_embeddings():
     return np.load(EMBED_PATH)
 
+
 embeddings = load_embeddings()
 
 item_index_map = {item:idx for idx,item in enumerate(df["ItemID"])}
+
+# ==============================
+# AI IMAGE SEARCH
+# ==============================
+
+st.sidebar.divider()
+st.sidebar.header("AI Image Search")
+
+uploaded_image = st.sidebar.file_uploader(
+    "Upload clothing image",
+    type=["jpg","jpeg","png","webp"]
+)
+
+if uploaded_image is not None:
+
+    st.sidebar.image(uploaded_image)
+
+    image = preprocess(Image.open(uploaded_image)).unsqueeze(0).to(device)
+
+    with torch.no_grad():
+
+        image_features = model.encode_image(image)
+
+    query_embedding = image_features.cpu().numpy()
+
+    # ---------- AI TAG RECOGNITION ----------
+
+    style_labels = [
+        "a photo of elegant fashion",
+        "a photo of streetwear fashion",
+        "a photo of sporty outfit",
+        "a photo of minimal fashion",
+        "a photo of luxury fashion"
+    ]
+
+    occasion_labels = [
+        "a photo of red carpet outfit",
+        "a photo of party outfit",
+        "a photo of casual outfit",
+        "a photo of office outfit",
+        "a photo of vacation outfit"
+    ]
+
+    def predict_label(labels):
+
+        tokens = clip.tokenize(labels).to(device)
+
+        with torch.no_grad():
+
+            text_features = model.encode_text(tokens)
+
+        text_features = text_features.cpu().numpy()
+
+        sim = cosine_similarity(query_embedding, text_features)[0]
+
+        return labels[np.argmax(sim)].replace("a photo of ","")
+
+    style = predict_label(style_labels)
+    occasion = predict_label(occasion_labels)
+
+    st.sidebar.subheader("AI Recognition")
+
+    st.sidebar.write("Style:", style)
+    st.sidebar.write("Occasion:", occasion)
+
+    # ---------- SIMILAR SEARCH ----------
+
+    similarity = cosine_similarity(query_embedding, embeddings)[0]
+
+    top_indices = similarity.argsort()[::-1][:8]
+
+    st.session_state.similar_items = df.iloc[top_indices]
 
 # ==============================
 # IMAGE URL
@@ -168,33 +264,6 @@ def get_image_url(item_id):
             pass
 
     return "https://via.placeholder.com/400x500?text=No+Image"
-
-# ==============================
-# SIDEBAR CART
-# ==============================
-
-st.sidebar.title("🛍 Stylist Cart")
-
-cart = st.session_state.cart
-
-if len(cart) == 0:
-    st.sidebar.write("No items saved")
-
-for i,item in enumerate(cart):
-
-    st.sidebar.image(item["ImageURL"], width=80)
-    st.sidebar.markdown(f"**{item['Brand']}**")
-    st.sidebar.caption(item["Name"])
-
-    if st.sidebar.button("Remove", key=f"sidebar_remove_{i}"):
-
-        st.session_state.cart.pop(i)
-        st.rerun()
-
-st.sidebar.divider()
-
-if st.sidebar.button("Open Cart", key="open_cart"):
-    st.switch_page("pages/3_cart.py")
 
 # ==============================
 # FILTERS
@@ -274,41 +343,6 @@ for i,row in filtered_df.reset_index(drop=True).iterrows():
         if item_tags:
             st.caption(" ".join([f"#{t}" for t in item_tags]))
 
-        if st.button("Preview", key=f"preview_{item_id}"):
-
-            st.session_state.preview_item = row
-
-        if item_id in st.session_state.favorites:
-
-            if st.button("❤️ Remove", key=f"fav_{item_id}"):
-
-                st.session_state.favorites.remove(item_id)
-
-                st.session_state.cart = [
-                    x for x in st.session_state.cart
-                    if x["ItemID"] != item_id
-                ]
-
-                st.rerun()
-
-        else:
-
-            if st.button("🤍 Save", key=f"fav_{item_id}"):
-
-                st.session_state.favorites.add(item_id)
-
-                cart_item = {
-                    "ItemID": item_id,
-                    "Brand": row["Brand"],
-                    "Name": row["Name"],
-                    "ImageURL": image_url,
-                    "note": ""
-                }
-
-                st.session_state.cart.append(cart_item)
-
-                st.rerun()
-
         if st.button("Find Similar", key=f"sim_{item_id}"):
 
             idx = item_index_map.get(item_id)
@@ -329,7 +363,6 @@ for i,row in filtered_df.reset_index(drop=True).iterrows():
 if st.session_state.similar_items is not None:
 
     st.divider()
-
     st.subheader("Recommended Similar Items")
 
     cols = st.columns(4)
@@ -345,7 +378,8 @@ if st.session_state.similar_items is not None:
             st.markdown(f"**{row['Brand']}**")
             st.write(row["Name"])
 
-    if st.button("Close Similar", key="close_similar"):
+    if st.button("Close Similar"):
 
         st.session_state.similar_items = None
+
 
