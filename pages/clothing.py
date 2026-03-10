@@ -223,31 +223,30 @@ def get_celebrity_style(name):
     return "",""
 
 # ==============================
-# AI STYLIST
+# AI STYLIST (FIXED HF API)
 # ==============================
 
 def ai_agent(filtered_items):
 
     if "huggingface" not in st.secrets:
-
         return "⚠️ HuggingFace API key not configured."
 
-    api_key=st.secrets["huggingface"].get("api_key","")
+    api_key = st.secrets["huggingface"].get("api_key","")
 
-    if api_key=="":
+    if api_key == "":
         return "⚠️ HuggingFace API key missing."
 
-    if len(filtered_items)==0:
+    if len(filtered_items) == 0:
         return "No clothing items match the filters."
 
-    style_hint,celeb_description=get_celebrity_style(celebrity)
+    style_hint, celeb_description = get_celebrity_style(celebrity)
 
-    brands=", ".join(filtered_items["Brand"].unique()[:5])
-    categories=", ".join(filtered_items["Category"].unique()[:5])
-    colors=", ".join(filtered_items["Color"].unique()[:5])
+    brands = ", ".join(filtered_items["Brand"].unique()[:5])
+    categories = ", ".join(filtered_items["Category"].unique()[:5])
+    colors = ", ".join(filtered_items["Color"].unique()[:5])
 
-    prompt=f"""
-You are a professional celebrity fashion stylist.
+    prompt = f"""
+You are a professional celebrity stylist.
 
 Celebrity: {celebrity}
 
@@ -257,7 +256,7 @@ Celebrity style tags:
 Celebrity description:
 {celeb_description}
 
-Filters:
+Filters applied:
 Brand: {brand_multi}
 Category: {category_multi}
 Color: {color_multi}
@@ -269,56 +268,49 @@ Brands: {brands}
 Categories: {categories}
 Colors: {colors}
 
-Recommend clothing items suitable for the celebrity and explain why.
+Recommend suitable clothing items and explain the styling reasoning.
 """
 
-    headers={"Authorization":f"Bearer {api_key}"}
+    headers = {
+        "Authorization": f"Bearer {api_key}"
+    }
 
-    payload={
-        "inputs":prompt,
-        "parameters":{"max_new_tokens":200}
+    payload = {
+        "inputs": prompt,
+        "parameters": {
+            "max_new_tokens": 200,
+            "temperature": 0.7
+        }
     }
 
     try:
 
-        response=requests.post(
-            "https://api-inference.huggingface.co/models/google/flan-t5-large",
+        response = requests.post(
+            "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
             headers=headers,
             json=payload,
             timeout=60
         )
 
-        if response.status_code!=200:
-            return f"API error {response.status_code}"
+        if response.status_code != 200:
+            return f"⚠️ HuggingFace API error {response.status_code}"
 
-        result=response.json()
+        result = response.json()
 
-        if isinstance(result,list) and "generated_text" in result[0]:
-            return result[0]["generated_text"]
+        # 解析不同格式
+        if isinstance(result, list):
+            if "generated_text" in result[0]:
+                return result[0]["generated_text"]
 
-        if isinstance(result,dict) and "generated_text" in result:
-            return result["generated_text"]
+        if isinstance(result, dict):
+            if "generated_text" in result:
+                return result["generated_text"]
 
         return str(result)
 
     except Exception as e:
 
-        return f"AI error: {e}"
-
-# ==============================
-# AI BUTTON
-# ==============================
-
-if st.sidebar.button("Generate AI Styling Advice"):
-
-    with st.sidebar.spinner("AI stylist thinking..."):
-
-        advice=ai_agent(filtered_df)
-
-    st.sidebar.success("Styling Advice")
-
-    st.sidebar.write(advice)
-
+        return f"AI stylist error: {e}"
 # ==============================
 # GRID
 # ==============================
@@ -432,3 +424,4 @@ if st.session_state.preview_item is not None:
 
         if st.button("Close Preview"):
             st.session_state.preview_item=None
+
