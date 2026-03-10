@@ -1,9 +1,12 @@
 import streamlit as st
 import pandas as pd
 from collections import defaultdict
-from openai import OpenAI
 
 st.title("🛍 Saved Looks")
+
+# ==============================
+# CART DATA
+# ==============================
 
 cart = st.session_state.get("cart", [])
 
@@ -12,9 +15,9 @@ if len(cart) == 0:
 
 else:
 
-    for i,item in enumerate(cart):
+    for i, item in enumerate(cart):
 
-        col1,col2 = st.columns([1,2])
+        col1, col2 = st.columns([1,2])
 
         with col1:
             st.image(item["ImageURL"], use_container_width=True)
@@ -31,12 +34,13 @@ else:
                 st.session_state.cart.pop(i)
                 st.rerun()
 
+
 # ==============================
-# EMAIL GENERATION
+# LOAD BRAND CONTACTS
 # ==============================
 
 st.divider()
-st.subheader("Generate Brand Emails")
+st.subheader("Brand Contacts")
 
 CONTACT_PATH = "brand_contacts.xlsx"
 
@@ -46,73 +50,51 @@ def load_contacts():
 
 contacts = load_contacts()
 
-client = OpenAI(api_key=st.secrets["openai"]["api_key"])
-
-artist_info = {
-"name":"Sdanny Lee",
-"description":"Singer and performer known for modern stage aesthetic"
-}
-
-def get_brand_email(brand):
-
-    row = contacts[contacts["brand"]==brand]
-
-    if len(row)>0:
-        return row.iloc[0]["email"]
-
-    return None
-
-def generate_email(brand,items):
-
-    looks = "\n".join([f"- {i['Brand']} {i['Name']}" for i in items])
-
-    prompt = f"""
-Write a professional fashion sample request email.
-
-Artist: {artist_info['name']}
-
-Artist description:
-{artist_info['description']}
-
-Brand:
-{brand}
-
-Requested items:
-{looks}
-
-Tone: professional stylist.
-"""
-
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role":"user","content":prompt}]
-    )
-
-    return response.choices[0].message.content
+# ==============================
+# GROUP ITEMS BY BRAND
+# ==============================
 
 brand_groups = defaultdict(list)
 
 for item in cart:
     brand_groups[item["Brand"]].append(item)
 
-if st.button("Generate Emails"):
+# ==============================
+# SHOW BRAND CONTACTS
+# ==============================
 
-    for brand,items in brand_groups.items():
+if len(cart) > 0:
 
-        email = get_brand_email(brand)
+    for brand, items in brand_groups.items():
 
         st.markdown(f"### {brand}")
-        st.write("Email:",email)
 
-        email_text = generate_email(brand,items)
+        row = contacts[contacts["brand"] == brand]
 
-        st.text_area(
-            f"Email for {brand}",
-            email_text,
-            height=250
-        )
-if st.button("Request Samples"):
+        if len(row) > 0:
 
-    st.session_state.email_items = st.session_state.cart
+            contact = row.iloc[0]["contact_name"]
+            email = row.iloc[0]["email"]
 
-    st.switch_page("pages/email.py")
+            st.write("Contact:", contact)
+            st.write("Email:", email)
+
+        else:
+
+            st.warning("No contact information found for this brand.")
+
+
+# ==============================
+# REQUEST SAMPLE EMAIL
+# ==============================
+
+st.divider()
+
+if len(cart) > 0:
+
+    if st.button("Request Samples"):
+
+        # send cart items to email page
+        st.session_state.email_items = st.session_state.cart
+
+        st.switch_page("pages/email.py")
