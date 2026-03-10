@@ -9,11 +9,10 @@ st.set_page_config(page_title="AI Fashion Styling", layout="wide")
 st.title("AI Fashion Styling Platform")
 
 # ==============================
-# BASE DIRECTORY (FIX PATH)
+# BASE DIRECTORY
 # ==============================
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-
 
 # ==============================
 # Session State
@@ -39,7 +38,9 @@ def load_items():
     path = os.path.join(BASE_DIR, "items.csv")
 
     df = pd.read_csv(path, encoding="utf-8-sig")
+
     df.columns = df.columns.str.strip()
+
     df["ItemID"] = df["ItemID"].astype(str).str.strip()
 
     df = df[df["ItemID"] != "nan"]
@@ -72,24 +73,20 @@ item_index_map = {item: idx for idx, item in enumerate(df["ItemID"])}
 # ==============================
 # Find Image
 # ==============================
-st.write("Image folder:", BASE_DIR / "images")
-st.write("Files:", list((BASE_DIR / "images").iterdir())[:5])
-import pathlib
-
-BASE_DIR = pathlib.Path(__file__).resolve().parents[1]
 
 def find_image(item_id):
 
-    extensions = [".jpg", ".jpeg", ".png", ".webp", ".JPG", ".PNG"]
-
-    image_folder = BASE_DIR / "images"
+    extensions = [
+        ".jpg",".jpeg",".png",".webp",
+        ".JPG",".JPEG",".PNG",".WEBP"
+    ]
 
     for ext in extensions:
 
-        img_path = image_folder / f"{item_id}{ext}"
+        path = os.path.join(BASE_DIR, "images", f"{item_id}{ext}")
 
-        if img_path.exists():
-            return str(img_path)
+        if os.path.exists(path):
+            return path
 
     return None
 
@@ -150,7 +147,6 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
             )
 
         st.markdown(f"**{row['Brand']}**")
-
         st.write(row["Name"])
 
         fav_key = f"fav_{i}"
@@ -159,23 +155,18 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
 
         # Preview
         if st.button("Preview", key=preview_key):
-
             st.session_state.preview_item = row
-
 
         # Favorites
         if item_id in st.session_state.favorites:
 
             if st.button("❤️ Remove", key=fav_key):
-
                 st.session_state.favorites.remove(item_id)
 
         else:
 
             if st.button("🤍 Save", key=fav_key):
-
                 st.session_state.favorites.add(item_id)
-
 
         # Find Similar
         if st.button("Find Similar", key=sim_key):
@@ -220,7 +211,6 @@ if st.session_state.similar_items is not None:
                 )
 
             st.markdown(f"**{row['Brand']}**")
-
             st.write(row["Name"])
 
 
@@ -253,16 +243,15 @@ if st.session_state.preview_item is not None:
     with col2:
 
         st.markdown(f"### {item['Brand']}")
-
         st.write(item["Name"])
 
         st.write("Category:", item["Category"])
-
         st.write("Color:", item["Color"])
-
         st.write("Season:", item["Season"])
 
         if st.button("Close Preview"):
+            st.session_state.preview_item = None
 
             st.session_state.preview_item = None
+
 
