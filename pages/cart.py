@@ -111,3 +111,8 @@ if st.button("Generate Emails"):
             email_text,
             height=250
         )
+if st.button("Request Samples"):
+
+    st.session_state.email_items = st.session_state.cart
+
+    st.switch_page("pages/email.py")
