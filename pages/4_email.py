@@ -149,59 +149,70 @@ event_name = st.text_input("Event Name")
 event_intro = st.text_area("Event Introduction")
 
 # ======================
-# Gmail send
+# Email send function
 # ======================
 
 def send_email(to_email, subject, html, brand_items):
 
-    sender = st.secrets["email"]["sender"]
-    password = st.secrets["email"]["password"]
+    try:
 
-    msg = MIMEMultipart("related")
+        sender = st.secrets["email"]["sender"]
+        password = st.secrets["email"]["password"]
 
-    msg["Subject"] = subject
-    msg["From"] = sender
-    msg["To"] = to_email
+        msg = MIMEMultipart("related")
 
-    msg_alt = MIMEMultipart("alternative")
-    msg.attach(msg_alt)
+        msg["Subject"] = subject
+        msg["From"] = sender
+        msg["To"] = to_email
 
-    msg_alt.attach(MIMEText(html, "html"))
+        msg_alt = MIMEMultipart("alternative")
+        msg.attach(msg_alt)
 
-    for i,item in enumerate(brand_items):
+        msg_alt.attach(MIMEText(html, "html"))
 
-        response = requests.get(item["ImageURL"], timeout=10)
+        for i,item in enumerate(brand_items):
 
-        if response.status_code != 200:
-            continue
+            response = requests.get(item["ImageURL"], timeout=10)
 
-        img_data = response.content
+            if response.status_code != 200:
+                continue
 
-        image = MIMEImage(img_data)
+            img_data = response.content
 
-        cid = f"look{i}"
+            image = MIMEImage(img_data)
 
-        image.add_header("Content-ID", f"<{cid}>")
+            cid = f"look{i}"
 
-        msg.attach(image)
+            image.add_header("Content-ID", f"<{cid}>")
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            msg.attach(image)
 
-        server.login(sender, password)
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
 
-        server.sendmail(sender, to_email, msg.as_string())
+            server.login(sender, password)
+
+            server.sendmail(sender, to_email, msg.as_string())
+
+        return True, None
+
+    except Exception as e:
+
+        return False, str(e)
 
 # ======================
-# Generate emails
+# SEND ALL EMAILS
 # ======================
 
 st.divider()
 
-sent_brands = []
+if st.button("Send All Emails"):
 
-if st.button("Generate Emails"):
+    progress = st.progress(0)
 
-    for brand, brand_items in brand_groups.items():
+    total = len(brand_groups)
+    sent = []
+
+    for i,(brand, brand_items) in enumerate(brand_groups.items()):
 
         brand_row = contacts[contacts["brand"] == brand]
 
@@ -214,11 +225,11 @@ if st.button("Generate Emails"):
 
         looks_html = ""
 
-        for i,item in enumerate(brand_items):
+        for j,item in enumerate(brand_items):
 
             looks_html += f"""
             <p><b>{item['Brand']} {item['Name']}</b></p>
-            <img src="cid:look{i}" width="300"><br><br>
+            <img src="cid:look{j}" width="300"><br><br>
             """
 
         html = f"""
@@ -242,53 +253,32 @@ if st.button("Generate Emails"):
 {studio_name}</p>
 """
 
-        st.markdown(f"### Email Preview — {brand}")
+        success, error = send_email(
+            contact_email,
+            f"Sample Request – {artist_name}",
+            html,
+            brand_items
+        )
 
-        preview_html = ""
+        if success:
 
-        for item in brand_items:
+            st.success(f"{brand} email sent")
+            sent.append(brand)
 
-            preview_html += f"""
-            <p><b>{item['Brand']} {item['Name']}</b></p>
-            <img src="{item['ImageURL']}" width="300"><br><br>
-            """
+        else:
 
-        preview_email = f"""
-<p>Dear {contact_name},</p>
+            st.error(f"{brand} failed: {error}")
 
-<p>This is stylist {studio_name}.</p>
+        progress.progress((i+1)/total)
 
-<p>I’m requesting samples for <b>{artist_name}</b> for <b>{event_name}</b>.</p>
+    if len(sent) > 0:
 
-<p>{event_intro}</p>
-
-<p><b>Artist Introduction</b></p>
-
-<p>{artist_intro}</p>
-
-<p><b>Selected Looks</b></p>
-
-{preview_html}
-
-<p>Best regards,<br>
-{studio_name}</p>
-"""
-
-        st.markdown(preview_email, unsafe_allow_html=True)
-
-        if st.button(f"Send Email to {brand}", key=f"send_{brand}"):
-
-            send_email(
-                contact_email,
-                f"Sample Request – {artist_name}",
-                html,
-                brand_items
-            )
-
-            sent_brands.append(brand)
+        st.success(
+            "Emails successfully sent to: " + ", ".join(sent)
+        )
 
 # ======================
-# Sample Board
+# Sample board
 # ======================
 
 st.divider()
@@ -307,19 +297,7 @@ for i,item in enumerate(items):
         st.caption(item["Name"])
 
 # ======================
-# Send Success Message
-# ======================
-
-if len(sent_brands) > 0:
-
-    st.divider()
-
-    st.success(
-        "Emails successfully sent to: " + ", ".join(sent_brands)
-    )
-
-# ======================
-# Back Button
+# Back
 # ======================
 
 st.divider()
