@@ -28,36 +28,48 @@ CELEB_PATH = os.path.join(BASE_DIR, "celebrities.xlsx")
 # ======================
 
 @st.cache_data
-def load_contacts():
+def load_contacts(path, modified_time):
 
-    if os.path.exists(CONTACT_PATH):
+    df = pd.read_excel(path)
+    df.columns = df.columns.str.strip()
 
-        df = pd.read_excel(CONTACT_PATH)
-        df.columns = df.columns.str.strip()
+    return df
 
-        return df
 
-    return pd.DataFrame(columns=["brand","contact_name","email"])
+if os.path.exists(CONTACT_PATH):
 
-contacts = load_contacts()
+    contacts = load_contacts(
+        CONTACT_PATH,
+        os.path.getmtime(CONTACT_PATH)
+    )
+
+else:
+
+    contacts = pd.DataFrame(columns=["brand","contact_name","email"])
 
 # ======================
 # Load celebrities
 # ======================
 
 @st.cache_data
-def load_celebrities():
+def load_celebrities(path, modified_time):
 
-    if os.path.exists(CELEB_PATH):
+    df = pd.read_excel(path)
+    df.columns = df.columns.str.strip()
 
-        df = pd.read_excel(CELEB_PATH)
-        df.columns = df.columns.str.strip()
+    return df
 
-        return df
 
-    return pd.DataFrame(columns=["Name","Description","ImageURL"])
+if os.path.exists(CELEB_PATH):
 
-celeb_df = load_celebrities()
+    celeb_df = load_celebrities(
+        CELEB_PATH,
+        os.path.getmtime(CELEB_PATH)
+    )
+
+else:
+
+    celeb_df = pd.DataFrame(columns=["Name","Description","ImageURL"])
 
 # ======================
 # Get selected celebrity
@@ -89,8 +101,11 @@ col1, col2 = st.columns([1,2])
 
 with col1:
 
-    if "ImageURL" in row and str(row["ImageURL"]).startswith("http"):
-        st.image(row["ImageURL"], use_container_width=True)
+    if "ImageURL" in celeb_df.columns:
+
+        if str(row["ImageURL"]).startswith("http"):
+
+            st.image(row["ImageURL"], use_container_width=True)
 
 with col2:
 
@@ -217,11 +232,15 @@ if st.button("Send All Emails"):
         brand_row = contacts[contacts["brand"] == brand]
 
         if len(brand_row) == 0:
+
             st.warning(f"No contact info for {brand}")
             continue
 
         contact_name = brand_row.iloc[0]["contact_name"]
         contact_email = brand_row.iloc[0]["email"]
+
+        # DEBUG
+        st.write("Sending to:", contact_email)
 
         looks_html = ""
 
