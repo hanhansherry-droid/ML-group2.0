@@ -7,16 +7,16 @@ st.set_page_config(page_title="Select Celebrity", layout="wide")
 st.title("AI Fashion Stylist")
 st.subheader("Select Celebrity")
 
-# ======================
+
 # PATH
-# ======================
+
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CELEB_PATH = os.path.join(BASE_DIR, "celebrities.xlsx")
 
-# ======================
+
 # Load data
-# ======================
+
 
 @st.cache_data
 def load_celebrities():
@@ -31,9 +31,9 @@ def load_celebrities():
 
 celeb_df = load_celebrities()
 
-# ======================
+
 # Selector
-# ======================
+
 
 celebrity_list = celeb_df["Name"].dropna().tolist()
 
@@ -42,9 +42,9 @@ selected_name = st.selectbox(
     celebrity_list
 )
 
-# ======================
+
 # Display info
-# ======================
+
 
 row = celeb_df[celeb_df["Name"] == selected_name].iloc[0]
 
@@ -52,9 +52,9 @@ st.divider()
 
 col1, col2 = st.columns([1,1])
 
-# ======================
+
 # Image
-# ======================
+
 
 with col1:
 
@@ -65,9 +65,8 @@ with col1:
     else:
         st.warning("Image not available")
 
-# ======================
+
 # Info
-# ======================
 
 with col2:
 
@@ -82,9 +81,9 @@ with col2:
     st.write("Description")
     st.write(row["Description"])
 
-# ======================
+
 # Save Celebrity
-# ======================
+
 
 st.divider()
 
@@ -94,9 +93,8 @@ if st.button("Save Celebrity", key="save_celeb"):
 
     st.success(f"{selected_name} saved for styling")
 
-# ======================
 # Continue workflow
-# ======================
+
 
 if "selected_celebrity" in st.session_state:
 
@@ -105,3 +103,4 @@ if "selected_celebrity" in st.session_state:
     if st.button("Continue to Clothing", key="continue_clothing"):
 
         st.switch_page("pages/2_clothing.py")
+
