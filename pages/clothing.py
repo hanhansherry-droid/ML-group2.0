@@ -94,6 +94,7 @@ def get_image_url(item_id):
             pass
 
     return "https://via.placeholder.com/400x500?text=No+Image"
+
 # ==============================
 # SIDEBAR FILTERS
 # ==============================
@@ -109,6 +110,32 @@ category_filter = st.sidebar.selectbox("Category", categories)
 color_filter = st.sidebar.selectbox("Color", colors)
 
 # ==============================
+# NEW MULTI SELECT FILTERS
+# ==============================
+
+brand_multi = st.sidebar.multiselect(
+    "Brand (Multiple)",
+    options=sorted(df["Brand"].dropna().unique()),
+    default=st.session_state.get("brand_multi", [])
+)
+
+category_multi = st.sidebar.multiselect(
+    "Category (Multiple)",
+    options=sorted(df["Category"].dropna().unique()),
+    default=st.session_state.get("category_multi", [])
+)
+
+color_multi = st.sidebar.multiselect(
+    "Color (Multiple)",
+    options=sorted(df["Color"].dropna().unique()),
+    default=st.session_state.get("color_multi", [])
+)
+
+st.session_state["brand_multi"] = brand_multi
+st.session_state["category_multi"] = category_multi
+st.session_state["color_multi"] = color_multi
+
+# ==============================
 # APPLY FILTERS
 # ==============================
 
@@ -122,6 +149,17 @@ if category_filter != "All":
 
 if color_filter != "All":
     filtered_df = filtered_df[filtered_df["Color"] == color_filter]
+
+# MULTI FILTER (新增，不影响原逻辑)
+
+if len(brand_multi) > 0:
+    filtered_df = filtered_df[filtered_df["Brand"].isin(brand_multi)]
+
+if len(category_multi) > 0:
+    filtered_df = filtered_df[filtered_df["Category"].isin(category_multi)]
+
+if len(color_multi) > 0:
+    filtered_df = filtered_df[filtered_df["Color"].isin(color_multi)]
 
 # ==============================
 # CLOTHING GRID
@@ -235,5 +273,3 @@ if st.session_state.preview_item is not None:
 
         if st.button("Close Preview"):
             st.session_state.preview_item = None
-
-
