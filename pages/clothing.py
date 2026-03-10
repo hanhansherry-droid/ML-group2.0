@@ -71,27 +71,6 @@ item_index_map = {item: idx for idx, item in enumerate(df["ItemID"])}
 
 
 # ==============================
-# Find Image
-# ==============================
-
-def find_image(item_id):
-
-    extensions = [
-        ".jpg",".jpeg",".png",".webp",
-        ".JPG",".JPEG",".PNG",".WEBP"
-    ]
-
-    for ext in extensions:
-
-        path = os.path.join(BASE_DIR, "images", f"{item_id}{ext}")
-
-        if os.path.exists(path):
-            return path
-
-    return None
-
-
-# ==============================
 # Sidebar Filters
 # ==============================
 
@@ -136,10 +115,10 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
 
         item_id = row["ItemID"]
 
-        image = find_image(item_id)
+        image_url = row.get("ImageURL", None)
 
-        if image:
-            st.image(image, use_container_width=True)
+        if pd.notna(image_url):
+            st.image(image_url, use_container_width=True)
         else:
             st.image(
                 "https://via.placeholder.com/400x500?text=No+Image",
@@ -196,14 +175,14 @@ if st.session_state.similar_items is not None:
 
     cols = st.columns(4)
 
-    for i, row in sim_df.iterrows():
+    for i, row in sim_df.reset_index(drop=True).iterrows():
 
         with cols[i % 4]:
 
-            image = find_image(row["ItemID"])
+            image_url = row.get("ImageURL", None)
 
-            if image:
-                st.image(image, use_container_width=True)
+            if pd.notna(image_url):
+                st.image(image_url, use_container_width=True)
             else:
                 st.image(
                     "https://via.placeholder.com/400x500",
@@ -230,10 +209,10 @@ if st.session_state.preview_item is not None:
 
     with col1:
 
-        image = find_image(item["ItemID"])
+        image_url = item.get("ImageURL", None)
 
-        if image:
-            st.image(image, use_container_width=True)
+        if pd.notna(image_url):
+            st.image(image_url, use_container_width=True)
         else:
             st.image(
                 "https://via.placeholder.com/400x500",
@@ -243,6 +222,7 @@ if st.session_state.preview_item is not None:
     with col2:
 
         st.markdown(f"### {item['Brand']}")
+
         st.write(item["Name"])
 
         st.write("Category:", item["Category"])
@@ -253,5 +233,6 @@ if st.session_state.preview_item is not None:
             st.session_state.preview_item = None
 
             st.session_state.preview_item = None
+
 
 
