@@ -8,11 +8,11 @@ st.set_page_config(page_title="Fashion Collection", layout="wide")
 
 st.title("Fashion Collection")
 
-# ==============================
+# =====================================
 # BASE DIRECTORY
-# ==============================
+# =====================================
 
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 DATA_PATH = os.path.join(BASE_DIR, "items.csv")
 
@@ -20,9 +20,9 @@ EMBED_PATH = os.path.join(BASE_DIR, "embeddings", "clothing_embeddings.npy")
 
 HF_BASE = "https://huggingface.co/datasets/sherry2026/fashion-clothing-dataset/resolve/main/"
 
-# ==============================
+# =====================================
 # Session State
-# ==============================
+# =====================================
 
 if "favorites" not in st.session_state:
     st.session_state.favorites = set()
@@ -34,12 +34,16 @@ if "similar_items" not in st.session_state:
     st.session_state.similar_items = None
 
 
-# ==============================
+# =====================================
 # Load Items
-# ==============================
+# =====================================
 
 @st.cache_data
 def load_items():
+
+    if not os.path.exists(DATA_PATH):
+        st.error(f"items.csv not found: {DATA_PATH}")
+        st.stop()
 
     df = pd.read_csv(DATA_PATH, encoding="utf-8-sig")
 
@@ -50,20 +54,22 @@ def load_items():
 
     df["ItemID"] = df["ItemID"].astype(str).str.strip()
 
-    df = df.reset_index(drop=True)
-
     return df
 
 
 df = load_items()
 
 
-# ==============================
+# =====================================
 # Load Embeddings
-# ==============================
+# =====================================
 
 @st.cache_data
 def load_embeddings():
+
+    if not os.path.exists(EMBED_PATH):
+        st.error(f"Embedding file not found: {EMBED_PATH}")
+        st.stop()
 
     embeddings = np.load(EMBED_PATH)
 
@@ -75,37 +81,33 @@ embeddings = load_embeddings()
 item_index_map = {item: idx for idx, item in enumerate(df["ItemID"])}
 
 
-# ==============================
+# =====================================
 # Image URL
-# ==============================
+# =====================================
 
 def get_image_url(item_id):
 
     return f"{HF_BASE}{item_id}.jpg"
 
 
-# ==============================
+# =====================================
 # Sidebar Filters
-# ==============================
+# =====================================
 
 st.sidebar.header("Filters")
 
 brands = ["All"] + sorted(df["Brand"].dropna().unique().tolist())
-
 categories = ["All"] + sorted(df["Category"].dropna().unique().tolist())
-
 colors = ["All"] + sorted(df["Color"].dropna().unique().tolist())
 
 brand_filter = st.sidebar.selectbox("Brand", brands)
-
 category_filter = st.sidebar.selectbox("Category", categories)
-
 color_filter = st.sidebar.selectbox("Color", colors)
 
 
-# ==============================
+# =====================================
 # Apply Filters
-# ==============================
+# =====================================
 
 filtered_df = df.copy()
 
@@ -119,9 +121,9 @@ if color_filter != "All":
     filtered_df = filtered_df[filtered_df["Color"] == color_filter]
 
 
-# ==============================
+# =====================================
 # Clothing Grid
-# ==============================
+# =====================================
 
 st.subheader(f"{len(filtered_df)} items")
 
@@ -142,9 +144,7 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
         st.write(row["Name"])
 
         fav_key = f"fav_{item_id}"
-
         sim_key = f"sim_{item_id}"
-
         preview_key = f"preview_{item_id}"
 
 
@@ -182,9 +182,9 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
             st.session_state.similar_items = df.iloc[top_indices]
 
 
-# ==============================
+# =====================================
 # Similar Items
-# ==============================
+# =====================================
 
 if st.session_state.similar_items is not None:
 
@@ -209,9 +209,9 @@ if st.session_state.similar_items is not None:
             st.write(row["Name"])
 
 
-# ==============================
-# Preview Section
-# ==============================
+# =====================================
+# Preview
+# =====================================
 
 if st.session_state.preview_item is not None:
 
@@ -236,12 +236,8 @@ if st.session_state.preview_item is not None:
         st.write(item["Name"])
 
         st.write("Category:", item["Category"])
-
         st.write("Color:", item["Color"])
-
         st.write("Season:", item["Season"])
 
-
         if st.button("Close Preview"):
-
             st.session_state.preview_item = None
