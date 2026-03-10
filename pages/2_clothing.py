@@ -50,7 +50,7 @@ def load_clip():
 
     device="cuda" if torch.cuda.is_available() else "cpu"
 
-    model,preprocess=clip.load("ViT-B/32",device=device)
+    model,preprocess=clip.load("RN50",device=device)
 
     return model,preprocess,device
 
@@ -163,16 +163,29 @@ type=["jpg","jpeg","png","webp"]
 )
 
 run_ai=st.sidebar.button("Run AI Search")
-
 clear_ai=st.sidebar.button("Clear AI")
 
 # ==============================
-# LABEL PREDICTION
+# LABEL LIST
+# ==============================
+
+style_labels=["elegant","streetwear","sporty","minimal","luxury"]
+
+occasion_labels=["red carpet","party","casual","office","vacation"]
+
+color_labels=["black","white","red","pink","blue","beige"]
+
+pattern_labels=["floral","striped","solid","graphic"]
+
+# ==============================
+# PREDICT FUNCTION
 # ==============================
 
 def predict(query_embedding,labels):
 
-    tokens=clip.tokenize(labels).to(device)
+    prompts=[f"a photo of {l} clothing" for l in labels]
+
+    tokens=clip.tokenize(prompts).to(device)
 
     with torch.no_grad():
         text_features=model.encode_text(tokens)
@@ -183,41 +196,11 @@ def predict(query_embedding,labels):
 
     return labels[np.argmax(sim)]
 
-style_labels=[
-"a photo of elegant fashion",
-"a photo of streetwear fashion",
-"a photo of sporty outfit",
-"a photo of minimal fashion",
-"a photo of luxury fashion"
-]
-
-occasion_labels=[
-"a photo of red carpet outfit",
-"a photo of party outfit",
-"a photo of casual outfit",
-"a photo of office outfit",
-"a photo of vacation outfit"
-]
-
-color_labels=[
-"a photo of black clothing",
-"a photo of white clothing",
-"a photo of red clothing",
-"a photo of pink clothing",
-"a photo of blue clothing",
-"a photo of beige clothing"
-]
-
-pattern_labels=[
-"a photo of floral pattern clothing",
-"a photo of striped clothing",
-"a photo of solid color clothing",
-"a photo of graphic print clothing"
-]
-
 # ==============================
 # RUN AI
 # ==============================
+
+query_embedding=None
 
 if uploaded_image and run_ai:
 
@@ -228,10 +211,10 @@ if uploaded_image and run_ai:
 
     query_embedding=image_features.cpu().numpy()
 
-    style=predict(query_embedding,style_labels).replace("a photo of ","")
-    occasion=predict(query_embedding,occasion_labels).replace("a photo of ","")
-    color=predict(query_embedding,color_labels).replace("a photo of ","")
-    pattern=predict(query_embedding,pattern_labels).replace("a photo of ","")
+    style=predict(query_embedding,style_labels)
+    occasion=predict(query_embedding,occasion_labels)
+    color=predict(query_embedding,color_labels)
+    pattern=predict(query_embedding,pattern_labels)
 
     st.session_state.ai_style=style
     st.session_state.ai_occasion=occasion
@@ -300,7 +283,8 @@ if st.session_state.ai_mode:
 
     matched_tags=[
         st.session_state.ai_style,
-        st.session_state.ai_occasion
+        st.session_state.ai_occasion,
+        st.session_state.ai_pattern
     ]
 
     item_ids=tags_df[
@@ -308,6 +292,15 @@ if st.session_state.ai_mode:
     ]["ItemID"].unique()
 
     filtered_df=filtered_df[filtered_df["ItemID"].isin(item_ids)]
+
+    # fallback to embedding similarity
+    if len(filtered_df)==0 and query_embedding is not None:
+
+        similarity=cosine_similarity(query_embedding,embeddings)[0]
+
+        top_indices=similarity.argsort()[::-1][:12]
+
+        filtered_df=df.iloc[top_indices]
 
 # ==============================
 # CELEBRITY STYLE BOOST
@@ -410,9 +403,9 @@ for i,row in filtered_df.reset_index(drop=True).iterrows():
 
             if idx is not None:
 
-                query_embedding=embeddings[idx].reshape(1,-1)
+                query_embedding2=embeddings[idx].reshape(1,-1)
 
-                similarity=cosine_similarity(query_embedding,embeddings)[0]
+                similarity=cosine_similarity(query_embedding2,embeddings)[0]
 
                 top_indices=similarity.argsort()[::-1][1:9]
 
