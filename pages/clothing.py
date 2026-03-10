@@ -97,6 +97,46 @@ def load_celebrities():
 celeb_df = load_celebrities()
 
 # ==============================
+# GET SELECTED CELEBRITY
+# ==============================
+
+selected_celebrity = st.session_state.get("selected_celebrity")
+
+if selected_celebrity is None:
+
+    st.warning("Please select a celebrity first.")
+
+    if st.button("Go to Celebrity Page"):
+        st.switch_page("pages/celebrity.py")
+
+    st.stop()
+
+st.success(f"Styling for: {selected_celebrity}")
+
+# ==============================
+# GET CELEBRITY STYLE
+# ==============================
+
+def get_celebrity_style(name):
+
+    row = celeb_df[celeb_df["Name"] == name]
+
+    if len(row) > 0:
+
+        style = row.iloc[0]["Style Tags"]
+        description = row.iloc[0]["Description"]
+
+        return style, description
+
+    return "", ""
+
+style_tags, celebrity_description = get_celebrity_style(selected_celebrity)
+
+st.sidebar.subheader("Celebrity Style")
+
+st.sidebar.write(style_tags)
+
+# ==============================
 # LOAD EMBEDDINGS
 # ==============================
 
@@ -186,18 +226,10 @@ color_multi = st.sidebar.multiselect(
 )
 
 occasion_tags = tags_df[tags_df["TagType"]=="Occasion"]["Tag"].unique()
-style_tags = tags_df[tags_df["TagType"]=="Style"]["Tag"].unique()
+style_tags_filter = tags_df[tags_df["TagType"]=="Style"]["Tag"].unique()
 
 occasion_filter = st.sidebar.multiselect("Occasion", sorted(occasion_tags))
-style_filter = st.sidebar.multiselect("Style", sorted(style_tags))
-
-# ==============================
-# CELEBRITY
-# ==============================
-
-celebrity_list = celeb_df["Name"].dropna().unique().tolist()
-
-celebrity = st.sidebar.selectbox("Celebrity", celebrity_list)
+style_filter = st.sidebar.multiselect("Style", sorted(style_tags_filter))
 
 # ==============================
 # APPLY FILTER
@@ -261,10 +293,6 @@ for i,row in filtered_df.reset_index(drop=True).iterrows():
 
             st.session_state.preview_item = row
 
-        # ======================
-        # SAVE / REMOVE
-        # ======================
-
         if item_id in st.session_state.favorites:
 
             if st.button("❤️ Remove", key=fav_key):
@@ -295,10 +323,6 @@ for i,row in filtered_df.reset_index(drop=True).iterrows():
                 st.session_state.cart.append(cart_item)
 
                 st.rerun()
-
-        # ======================
-        # SIMILAR
-        # ======================
 
         if st.button("Find Similar", key=sim_key):
 
@@ -378,6 +402,3 @@ if st.session_state.preview_item is not None:
 
             st.write("Tags:", ", ".join(item_tags))
 
-        if st.button("Close Preview"):
-
-            st.session_state.preview_item = None
