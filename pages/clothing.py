@@ -16,9 +16,7 @@ st.title("Fashion Collection")
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 DATA_PATH = os.path.join(BASE_DIR, "items.csv")
-
 EMBED_PATH = os.path.join(BASE_DIR, "embeddings", "clothing_embeddings.npy")
-
 TAGS_PATH = os.path.join(BASE_DIR, "tags.xlsx")
 
 HF_BASE = "https://huggingface.co/datasets/sherry2026/fashion-clothing-dataset/resolve/main/"
@@ -37,70 +35,50 @@ if "similar_items" not in st.session_state:
     st.session_state.similar_items = None
 
 # ==============================
-# LOAD ITEMS
+# LOAD DATA
 # ==============================
 
 @st.cache_data
 def load_items():
-
     df = pd.read_csv(DATA_PATH, encoding="utf-8-sig")
-
     df.columns = df.columns.str.strip()
 
     if "No." in df.columns:
         df = df.drop(columns=["No."])
 
     df["ItemID"] = df["ItemID"].astype(str).str.strip()
-
     return df
-
 
 df = load_items()
 
-# ==============================
-# LOAD TAGS
-# ==============================
 
 @st.cache_data
 def load_tags():
-
     if os.path.exists(TAGS_PATH):
-
         tags = pd.read_excel(TAGS_PATH)
-
         tags["ItemID"] = tags["ItemID"].astype(str).str.strip()
-
         return tags
-
-    return pd.DataFrame(columns=["ItemID", "TagType", "Tag"])
-
+    return pd.DataFrame(columns=["ItemID","TagType","Tag"])
 
 tags_df = load_tags()
 
-# ==============================
-# LOAD EMBEDDINGS
-# ==============================
 
 @st.cache_data
 def load_embeddings():
-
-    embeddings = np.load(EMBED_PATH)
-
-    return embeddings
-
+    return np.load(EMBED_PATH)
 
 embeddings = load_embeddings()
 
-item_index_map = {item: idx for idx, item in enumerate(df["ItemID"])}
+item_index_map = {item: idx for idx,item in enumerate(df["ItemID"])}
 
 # ==============================
-# IMAGE URL (完全不动)
+# IMAGE URL (保持原逻辑)
 # ==============================
 
 @st.cache_data
 def get_image_url(item_id):
 
-    extensions = [".jpg", ".png", ".jpeg", ".webp"]
+    extensions = [".jpg",".png",".jpeg",".webp"]
 
     for ext in extensions:
 
@@ -117,194 +95,233 @@ def get_image_url(item_id):
 
     return "https://via.placeholder.com/400x500?text=No+Image"
 
+
 # ==============================
-# SIDEBAR FILTERS
+# SIDEBAR
 # ==============================
 
 st.sidebar.header("Filters")
 
 brand_multi = st.sidebar.multiselect(
     "Brand",
-    options=sorted(df["Brand"].dropna().unique())
+    sorted(df["Brand"].dropna().unique())
 )
 
 category_multi = st.sidebar.multiselect(
     "Category",
-    options=sorted(df["Category"].dropna().unique())
+    sorted(df["Category"].dropna().unique())
 )
 
 color_multi = st.sidebar.multiselect(
     "Color",
-    options=sorted(df["Color"].dropna().unique())
+    sorted(df["Color"].dropna().unique())
 )
 
-# TAG FILTERS
+# TAG FILTER
 
-occasion_tags = tags_df[tags_df["TagType"] == "Occasion"]["Tag"].unique()
+occasion_tags = tags_df[tags_df["TagType"]=="Occasion"]["Tag"].unique()
+style_tags = tags_df[tags_df["TagType"]=="Style"]["Tag"].unique()
 
-style_tags = tags_df[tags_df["TagType"] == "Style"]["Tag"].unique()
+occasion_filter = st.sidebar.multiselect("Occasion",sorted(occasion_tags))
+style_filter = st.sidebar.multiselect("Style",sorted(style_tags))
 
-occasion_filter = st.sidebar.multiselect(
-    "Occasion",
-    options=sorted(occasion_tags)
-)
+# Celebrity selector
 
-style_filter = st.sidebar.multiselect(
-    "Style",
-    options=sorted(style_tags)
+celebrity = st.sidebar.selectbox(
+    "Celebrity",
+    ["Jennie","Lisa","Zendaya","Taylor Swift","Rihanna"]
 )
 
 # ==============================
-# APPLY FILTERS
+# APPLY FILTER
 # ==============================
 
 filtered_df = df.copy()
 
-if len(brand_multi) > 0:
+if brand_multi:
     filtered_df = filtered_df[filtered_df["Brand"].isin(brand_multi)]
 
-if len(category_multi) > 0:
+if category_multi:
     filtered_df = filtered_df[filtered_df["Category"].isin(category_multi)]
 
-if len(color_multi) > 0:
+if color_multi:
     filtered_df = filtered_df[filtered_df["Color"].isin(color_multi)]
 
-# TAG FILTER
-
-if len(occasion_filter) > 0:
+if occasion_filter:
 
     item_ids = tags_df[
         tags_df["Tag"].isin(occasion_filter)
     ]["ItemID"].unique()
 
-    filtered_df = filtered_df[filtered_df["ItemID"].isin(item_ids)]
+    filtered_df = filtered_df[
+        filtered_df["ItemID"].isin(item_ids)
+    ]
 
-if len(style_filter) > 0:
+if style_filter:
 
     item_ids = tags_df[
         tags_df["Tag"].isin(style_filter)
     ]["ItemID"].unique()
 
-    filtered_df = filtered_df[filtered_df["ItemID"].isin(item_ids)]
+    filtered_df = filtered_df[
+        filtered_df["ItemID"].isin(item_ids)
+    ]
 
 # ==============================
-# CLOTHING GRID
+# AI AGENT
+# ==============================
+
+def ai_agent(filtered_items):
+
+    api_key = st.secrets["huggingface"]["api_key"]
+
+    prompt = f"""
+You are a professional fashion stylist.
+
+Celebrity: {celebrity}
+
+Filters:
+Brand: {brand_multi}
+Category: {category_multi}
+Color: {color_multi}
+Occasion: {occasion_filter}
+Style: {style_filter}
+
+Items available:
+{filtered_items.head(10).to_dict()}
+
+Recommend suitable clothing pieces and explain why.
+"""
+
+    response = requests.post(
+        "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
+        headers={"Authorization": f"Bearer {api_key}"},
+        json={"inputs":prompt}
+    )
+
+    try:
+        return response.json()[0]["generated_text"]
+    except:
+        return "AI stylist unavailable."
+
+
+if st.sidebar.button("Generate AI Styling Advice"):
+
+    advice = ai_agent(filtered_df)
+
+    st.sidebar.write(advice)
+
+# ==============================
+# GRID
 # ==============================
 
 st.subheader(f"{len(filtered_df)} items")
 
 cols = st.columns(4)
 
-for i, row in filtered_df.reset_index(drop=True).iterrows():
+for i,row in filtered_df.reset_index(drop=True).iterrows():
 
-    with cols[i % 4]:
+    with cols[i%4]:
 
         item_id = row["ItemID"]
 
         image_url = get_image_url(item_id)
 
-        st.image(image_url, use_container_width=True)
+        st.image(image_url,use_container_width=True)
 
         st.markdown(f"**{row['Brand']}**")
         st.write(row["Name"])
 
-        # SHOW TAGS
+        # TAGS
+        item_tags = tags_df[tags_df["ItemID"]==item_id]["Tag"].tolist()
 
-        item_tags = tags_df[tags_df["ItemID"] == item_id]["Tag"].tolist()
-
-        if len(item_tags) > 0:
+        if item_tags:
             st.caption(" ".join([f"#{t}" for t in item_tags]))
 
-        fav_key = f"fav_{item_id}"
-        sim_key = f"sim_{item_id}"
-        preview_key = f"preview_{item_id}"
+        fav_key=f"fav_{item_id}"
+        sim_key=f"sim_{item_id}"
+        preview_key=f"preview_{item_id}"
 
-        # PREVIEW
-        if st.button("Preview", key=preview_key):
-            st.session_state.preview_item = row
+        if st.button("Preview",key=preview_key):
+            st.session_state.preview_item=row
 
-        # FAVORITES
         if item_id in st.session_state.favorites:
-
-            if st.button("❤️ Remove", key=fav_key):
+            if st.button("❤️ Remove",key=fav_key):
                 st.session_state.favorites.remove(item_id)
-
         else:
-
-            if st.button("🤍 Save", key=fav_key):
+            if st.button("🤍 Save",key=fav_key):
                 st.session_state.favorites.add(item_id)
 
-        # SIMILARITY SEARCH
-        if st.button("Find Similar", key=sim_key):
+        if st.button("Find Similar",key=sim_key):
 
-            idx = item_index_map[item_id]
+            idx=item_index_map[item_id]
 
-            query_embedding = embeddings[idx].reshape(1, -1)
+            query_embedding=embeddings[idx].reshape(1,-1)
 
-            similarity = cosine_similarity(query_embedding, embeddings)[0]
+            similarity=cosine_similarity(query_embedding,embeddings)[0]
 
-            top_indices = similarity.argsort()[::-1][1:9]
+            top_indices=similarity.argsort()[::-1][1:9]
 
-            st.session_state.similar_items = df.iloc[top_indices]
+            st.session_state.similar_items=df.iloc[top_indices]
 
 # ==============================
-# SIMILAR ITEMS
+# SIMILAR MODAL
 # ==============================
 
 if st.session_state.similar_items is not None:
 
-    st.divider()
+    with st.container():
 
-    st.subheader("Recommended Similar Items")
+        st.subheader("Recommended Similar Items")
 
-    sim_df = st.session_state.similar_items
+        cols=st.columns(4)
 
-    cols = st.columns(4)
+        for i,row in st.session_state.similar_items.reset_index(drop=True).iterrows():
 
-    for i, row in sim_df.reset_index(drop=True).iterrows():
+            with cols[i%4]:
 
-        with cols[i % 4]:
+                image_url=get_image_url(row["ItemID"])
 
-            image_url = get_image_url(row["ItemID"])
+                st.image(image_url,use_container_width=True)
 
-            st.image(image_url, use_container_width=True)
+                st.markdown(f"**{row['Brand']}**")
+                st.write(row["Name"])
 
-            st.markdown(f"**{row['Brand']}**")
-            st.write(row["Name"])
+        if st.button("Close Similar"):
+            st.session_state.similar_items=None
 
 # ==============================
-# PREVIEW SECTION
+# PREVIEW MODAL
 # ==============================
 
 if st.session_state.preview_item is not None:
 
-    st.divider()
+    item=st.session_state.preview_item
 
-    item = st.session_state.preview_item
+    st.divider()
 
     st.subheader("Item Preview")
 
-    col1, col2 = st.columns([1, 1])
+    col1,col2=st.columns([1,1])
 
     with col1:
 
-        image_url = get_image_url(item["ItemID"])
-
-        st.image(image_url, use_container_width=True)
+        image_url=get_image_url(item["ItemID"])
+        st.image(image_url,use_container_width=True)
 
     with col2:
 
         st.markdown(f"### {item['Brand']}")
         st.write(item["Name"])
 
-        st.write("Category:", item["Category"])
-        st.write("Color:", item["Color"])
-        st.write("Season:", item["Season"])
+        st.write("Category:",item["Category"])
+        st.write("Color:",item["Color"])
+        st.write("Season:",item["Season"])
 
-        item_tags = tags_df[tags_df["ItemID"] == item["ItemID"]]["Tag"].tolist()
+        item_tags = tags_df[tags_df["ItemID"]==item["ItemID"]]["Tag"].tolist()
 
-        if len(item_tags) > 0:
-            st.write("Tags:", ", ".join(item_tags))
+        if item_tags:
+            st.write("Tags:",", ".join(item_tags))
 
         if st.button("Close Preview"):
-            st.session_state.preview_item = None
+            st.session_state.preview_item=None
