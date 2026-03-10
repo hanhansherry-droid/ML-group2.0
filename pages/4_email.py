@@ -2,8 +2,12 @@ import streamlit as st
 import pandas as pd
 import smtplib
 import os
+import requests
+
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
+
 from collections import defaultdict
 
 st.set_page_config(page_title="Sample Request Email", layout="wide")
@@ -145,21 +149,37 @@ event_name = st.text_input("Event Name")
 event_intro = st.text_area("Event Introduction")
 
 # ======================
-# Gmail send
+# Gmail send (CID images)
 # ======================
 
-def send_email(to_email, subject, html):
+def send_email(to_email, subject, html, brand_items):
 
     sender = st.secrets["email"]["sender"]
     password = st.secrets["email"]["password"]
 
-    msg = MIMEMultipart("alternative")
+    msg = MIMEMultipart("related")
 
     msg["Subject"] = subject
     msg["From"] = sender
     msg["To"] = to_email
 
-    msg.attach(MIMEText(html, "html"))
+    msg_alt = MIMEMultipart("alternative")
+    msg.attach(msg_alt)
+
+    msg_alt.attach(MIMEText(html, "html"))
+
+    # attach images
+    for i,item in enumerate(brand_items):
+
+        img_data = requests.get(item["ImageURL"]).content
+
+        image = MIMEImage(img_data)
+
+        cid = f"look{i}"
+
+        image.add_header("Content-ID", f"<{cid}>")
+
+        msg.attach(image)
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
 
@@ -188,11 +208,11 @@ if st.button("Generate Emails", key="generate_email"):
 
         looks_html = ""
 
-        for item in brand_items:
+        for i,item in enumerate(brand_items):
 
             looks_html += f"""
             <p><b>{item['Brand']} {item['Name']}</b></p>
-            <img src="{item['ImageURL']}" width="300"><br><br>
+            <img src="cid:look{i}" width="300"><br><br>
             """
 
         html = f"""
@@ -218,14 +238,46 @@ if st.button("Generate Emails", key="generate_email"):
 
         st.markdown(f"### Email Preview — {brand}")
 
-        st.markdown(html, unsafe_allow_html=True)
+        # preview images still use URL
+        preview_html = ""
+
+        for item in brand_items:
+
+            preview_html += f"""
+            <p><b>{item['Brand']} {item['Name']}</b></p>
+            <img src="{item['ImageURL']}" width="300"><br><br>
+            """
+
+        preview_email = f"""
+<p>Dear {contact_name},</p>
+
+<p>This is stylist {studio_name}.</p>
+
+<p>I’m requesting samples for <b>{artist_name}</b> for <b>{event_name}</b>.</p>
+
+<p>{event_intro}</p>
+
+<p><b>Artist Introduction</b></p>
+
+<p>{artist_intro}</p>
+
+<p><b>Selected Looks</b></p>
+
+{preview_html}
+
+<p>Best regards,<br>
+{studio_name}</p>
+"""
+
+        st.markdown(preview_email, unsafe_allow_html=True)
 
         if st.button(f"Send Email to {brand}", key=f"send_{brand}"):
 
             send_email(
                 contact_email,
                 f"Sample Request – {artist_name}",
-                html
+                html,
+                brand_items
             )
 
             st.success(f"Email sent to {brand}!")
