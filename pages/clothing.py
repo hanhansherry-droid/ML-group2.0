@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import os
+import requests
 from sklearn.metrics.pairwise import cosine_similarity
 
 st.set_page_config(page_title="AI Fashion Styling", layout="wide")
@@ -14,6 +15,8 @@ st.title("AI Fashion Styling Platform")
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
+# HuggingFace dataset base url
+HF_BASE = "https://huggingface.co/datasets/sherry2026/fashion-clothing-dataset/resolve/main/"
 
 # ==============================
 # Session State
@@ -30,7 +33,7 @@ if "similar_items" not in st.session_state:
 
 
 # ==============================
-# Load Items CSV
+# Load CSV
 # ==============================
 
 @st.cache_data
@@ -40,16 +43,12 @@ def load_items():
 
     df = pd.read_csv(path, encoding="utf-8-sig")
 
-    # clean column names
     df.columns = df.columns.str.strip()
 
-    # remove No. column if exists
     if "No." in df.columns:
         df = df.drop(columns=["No."])
 
-    # clean fields
     df["ItemID"] = df["ItemID"].astype(str).str.strip()
-    df["ImageURL"] = df["ImageURL"].astype(str).str.strip()
 
     df = df.reset_index(drop=True)
 
@@ -74,6 +73,31 @@ def load_embeddings():
 embeddings = load_embeddings()
 
 item_index_map = {item: idx for idx, item in enumerate(df["ItemID"])}
+
+
+# ==============================
+# Auto Detect Image URL
+# ==============================
+
+@st.cache_data
+def get_image_url(item_id):
+
+    extensions = [".jpg", ".png", ".jpeg", ".webp"]
+
+    for ext in extensions:
+
+        url = f"{HF_BASE}{item_id}{ext}"
+
+        try:
+            r = requests.head(url)
+
+            if r.status_code == 200:
+                return url
+
+        except:
+            pass
+
+    return None
 
 
 # ==============================
@@ -121,9 +145,9 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
 
         item_id = row["ItemID"]
 
-        image_url = row["ImageURL"]
+        image_url = get_image_url(item_id)
 
-        if image_url and image_url != "nan":
+        if image_url:
             st.image(image_url, use_container_width=True)
         else:
             st.image(
@@ -185,9 +209,9 @@ if st.session_state.similar_items is not None:
 
         with cols[i % 4]:
 
-            image_url = row["ImageURL"]
+            image_url = get_image_url(row["ItemID"])
 
-            if image_url and image_url != "nan":
+            if image_url:
                 st.image(image_url, use_container_width=True)
             else:
                 st.image(
@@ -211,13 +235,13 @@ if st.session_state.preview_item is not None:
 
     st.subheader("Item Preview")
 
-    col1, col2 = st.columns([1, 1])
+    col1, col2 = st.columns([1,1])
 
     with col1:
 
-        image_url = item["ImageURL"]
+        image_url = get_image_url(item["ItemID"])
 
-        if image_url and image_url != "nan":
+        if image_url:
             st.image(image_url, use_container_width=True)
         else:
             st.image(
@@ -237,4 +261,3 @@ if st.session_state.preview_item is not None:
 
         if st.button("Close Preview"):
             st.session_state.preview_item = None
-
