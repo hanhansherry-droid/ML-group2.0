@@ -6,7 +6,7 @@ st.set_page_config(
 )
 
 # ======================
-# CART SESSION
+# SESSION
 # ======================
 
 if "cart" not in st.session_state:
@@ -121,6 +121,17 @@ background:#fafafa;
 border-right:1px solid #eee;
 }
 
+/* IMAGE STYLE */
+
+img{
+border-radius:10px;
+}
+
+img:hover{
+transform:scale(1.02);
+transition:0.3s;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -174,24 +185,25 @@ col1, col2, col3 = st.columns([2,1,2])
 
 with col2:
     if st.button("Start Styling", key="start_styling"):
-        st.switch_page("pages/celebrity.py")
+        st.switch_page("pages/1_celebrity.py")
 
 st.write("")
 st.write("")
 
 # ======================
-# FEATURE DESCRIPTION
+# WORKFLOW STEPS
 # ======================
 
 st.markdown("""
 <div class="feature">
 
-<h2>AI Powered Fashion Styling</h2>
+<h2>How It Works</h2>
 
 <p>
-Select a celebrity, choose styling preferences,
-discover curated fashion pieces and generate
-brand sample request emails automatically.
+1. Select a celebrity style reference  
+2. Explore curated fashion pieces  
+3. Save looks to your stylist cart  
+4. Generate brand sample request emails
 </p>
 
 </div>
@@ -208,21 +220,61 @@ col1, col2, col3 = st.columns(3)
 
 with col1:
     if st.button("Select Celebrity", key="btn_celebrity"):
-        st.switch_page("pages/celebrity.py")
+        st.switch_page("pages/1_celebrity.py")
 
 with col2:
     if st.button("Browse Clothing", key="btn_clothing"):
-        st.switch_page("pages/clothing.py")
+        st.switch_page("pages/2_clothing.py")
 
 with col3:
     if st.button("Generate Email", key="btn_email"):
-        st.switch_page("pages/email.py")
+        st.switch_page("pages/4_email.py")
+
+st.write("")
+st.write("")
+
+# ======================
+# TRENDING PREVIEW
+# ======================
+
+st.markdown("### Trending Looks")
+
+col1, col2, col3, col4 = st.columns(4)
+
+sample_images = [
+"https://images.unsplash.com/photo-1520975916090-3105956dac38",
+"https://images.unsplash.com/photo-1519741497674-611481863552",
+"https://images.unsplash.com/photo-1503342217505-b0a15ec3261c",
+"https://images.unsplash.com/photo-1529139574466-a303027c1d8b"
+]
+
+for i,col in enumerate([col1,col2,col3,col4]):
+    with col:
+        st.image(sample_images[i], use_container_width=True)
+
+st.write("")
+st.write("")
+
+# ======================
+# SIDEBAR WORKFLOW
+# ======================
+
+st.sidebar.markdown("### Styling Workflow")
+
+st.sidebar.markdown("""
+1️⃣ Celebrity  
+2️⃣ Clothing  
+3️⃣ Cart  
+4️⃣ Email
+""")
+
+st.sidebar.divider()
 
 # ======================
 # SIDEBAR CART
 # ======================
 
-st.sidebar.markdown("## 🛍 Stylist Cart")
+st.sidebar.markdown("### 🛍 Stylist Cart")
 
 cart = st.session_state.cart
 
@@ -242,5 +294,8 @@ for i, item in enumerate(cart):
 st.sidebar.divider()
 
 if st.sidebar.button("Open Cart", key="sidebar_open_cart"):
+    st.switch_page("pages/3_cart.py")
+if st.sidebar.button("Open Cart", key="sidebar_open_cart"):
     st.switch_page("pages/cart.py")
+
 
