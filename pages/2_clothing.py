@@ -12,9 +12,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 st.set_page_config(page_title="Fashion Collection", layout="wide")
 st.title("Fashion Collection")
 
-# ==============================
+# ======================
 # PATH
-# ==============================
+# ======================
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -25,114 +25,109 @@ CELEB_PATH = os.path.join(BASE_DIR,"celebrities.xlsx")
 
 HF_BASE = "https://huggingface.co/datasets/sherry2026/fashion-clothing-dataset/resolve/main/"
 
-# ==============================
-# SESSION
-# ==============================
+# ======================
+# SESSION STATE
+# ======================
 
 if "favorites" not in st.session_state:
-    st.session_state.favorites=set()
+    st.session_state.favorites = set()
 
 if "cart" not in st.session_state:
-    st.session_state.cart=[]
+    st.session_state.cart = []
+
+if "preview_item" not in st.session_state:
+    st.session_state.preview_item = None
 
 if "similar_items" not in st.session_state:
-    st.session_state.similar_items=None
+    st.session_state.similar_items = None
 
 if "ai_mode" not in st.session_state:
-    st.session_state.ai_mode=False
+    st.session_state.ai_mode = False
 
-# ==============================
+# ======================
 # LOAD CLIP
-# ==============================
+# ======================
 
 @st.cache_resource
 def load_clip():
 
-    device="cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    model,preprocess=clip.load("ViT-B/32",device=device)
+    model, preprocess = clip.load("ViT-B/32", device=device)
 
-    return model,preprocess,device
+    return model, preprocess, device
 
-model,preprocess,device=load_clip()
 
-# ==============================
+model, preprocess, device = load_clip()
+
+# ======================
 # LOAD DATA
-# ==============================
+# ======================
 
 @st.cache_data
 def load_items():
 
-    df=pd.read_csv(DATA_PATH,encoding="utf-8-sig")
-    df.columns=df.columns.str.strip()
+    df = pd.read_csv(DATA_PATH,encoding="utf-8-sig")
+    df.columns = df.columns.str.strip()
 
     if "No." in df.columns:
-        df=df.drop(columns=["No."])
+        df = df.drop(columns=["No."])
 
-    df["ItemID"]=df["ItemID"].astype(str).str.strip()
+    df["ItemID"] = df["ItemID"].astype(str).str.strip()
 
     return df
 
-df=load_items()
 
-# ==============================
-# TAGS
-# ==============================
+df = load_items()
 
 @st.cache_data
 def load_tags():
 
     if os.path.exists(TAGS_PATH):
 
-        tags=pd.read_excel(TAGS_PATH)
-        tags.columns=tags.columns.str.strip()
-        tags["ItemID"]=tags["ItemID"].astype(str).str.strip()
+        tags = pd.read_excel(TAGS_PATH)
+        tags.columns = tags.columns.str.strip()
+        tags["ItemID"] = tags["ItemID"].astype(str).str.strip()
 
         return tags
 
     return pd.DataFrame(columns=["ItemID","TagType","Tag"])
 
-tags_df=load_tags()
 
-# ==============================
-# CELEBRITIES
-# ==============================
+tags_df = load_tags()
 
 @st.cache_data
 def load_celebrities():
 
     if os.path.exists(CELEB_PATH):
 
-        df=pd.read_excel(CELEB_PATH)
-        df.columns=df.columns.str.strip()
+        df = pd.read_excel(CELEB_PATH)
+        df.columns = df.columns.str.strip()
 
         return df
 
     return pd.DataFrame(columns=["Name","Description","Style Tags"])
 
-celeb_df=load_celebrities()
 
-# ==============================
-# EMBEDDINGS
-# ==============================
+celeb_df = load_celebrities()
+
+# ======================
+# LOAD EMBEDDINGS
+# ======================
 
 @st.cache_data
 def load_embeddings():
+    return np.load(EMBED_PATH)
 
-    if os.path.exists(EMBED_PATH):
-        return np.load(EMBED_PATH)
+embeddings = load_embeddings()
 
-    return np.zeros((len(df),512))
+item_index_map = {item:idx for idx,item in enumerate(df["ItemID"])}
 
-embeddings=load_embeddings()
+# ======================
+# GET CELEBRITY
+# ======================
 
-item_index_map={item:idx for idx,item in enumerate(df["ItemID"])}
-
-# ==============================
-# CELEBRITY
-# ==============================
-
-selected_celebrity=st.session_state.get("selected_celebrity")
+selected_celebrity = st.session_state.get("selected_celebrity")
 
 if selected_celebrity is None:
 
@@ -147,55 +142,57 @@ st.success(f"Styling for: {selected_celebrity}")
 
 def get_celebrity_style(name):
 
-    row=celeb_df[celeb_df["Name"]==name]
+    row = celeb_df[celeb_df["Name"] == name]
 
     if len(row)>0:
 
-        style=row.iloc[0]["Style Tags"]
+        style = row.iloc[0]["Style Tags"]
+        description = row.iloc[0]["Description"]
 
-        return style
+        return style, description
 
-    return ""
+    return "", ""
 
-style_tags=get_celebrity_style(selected_celebrity)
+style_tags, celebrity_description = get_celebrity_style(selected_celebrity)
 
 st.sidebar.subheader("Celebrity Style")
 st.sidebar.write(style_tags)
 
-# ==============================
+# ======================
 # AI IMAGE SEARCH
-# ==============================
+# ======================
 
 st.sidebar.divider()
 st.sidebar.header("AI Image Search")
 
-uploaded_image=st.sidebar.file_uploader(
-"Upload clothing image",
-type=["jpg","jpeg","png","webp"]
+uploaded_image = st.sidebar.file_uploader(
+    "Upload clothing image",
+    type=["jpg","jpeg","png","webp"]
 )
 
-run_ai=st.sidebar.button("Run AI Search")
+run_ai = st.sidebar.button("Run AI Search")
+clear_ai = st.sidebar.button("Clear AI Search")
 
-clear_ai=st.sidebar.button("Clear AI")
+# ======================
+# AI LABEL PREDICT
+# ======================
 
-# ==============================
-# LABEL PREDICTION
-# ==============================
+def predict_label(query_embedding, labels):
 
-def predict(query_embedding,labels):
-
-    tokens=clip.tokenize(labels).to(device)
+    tokens = clip.tokenize(labels).to(device)
 
     with torch.no_grad():
-        text_features=model.encode_text(tokens)
 
-    text_features=text_features.cpu().numpy()
+        text_features = model.encode_text(tokens)
 
-    sim=cosine_similarity(query_embedding,text_features)[0]
+    text_features = text_features.cpu().numpy()
+
+    sim = cosine_similarity(query_embedding,text_features)[0]
 
     return labels[np.argmax(sim)]
 
-style_labels=[
+
+style_labels = [
 "a photo of elegant fashion",
 "a photo of streetwear fashion",
 "a photo of sporty outfit",
@@ -203,7 +200,7 @@ style_labels=[
 "a photo of luxury fashion"
 ]
 
-occasion_labels=[
+occasion_labels = [
 "a photo of red carpet outfit",
 "a photo of party outfit",
 "a photo of casual outfit",
@@ -211,66 +208,90 @@ occasion_labels=[
 "a photo of vacation outfit"
 ]
 
-color_labels=[
-"a photo of black clothing",
-"a photo of white clothing",
-"a photo of red clothing",
-"a photo of pink clothing",
-"a photo of blue clothing",
-"a photo of beige clothing"
-]
-
-pattern_labels=[
-"a photo of floral pattern clothing",
-"a photo of striped clothing",
-"a photo of solid color clothing",
-"a photo of graphic print clothing"
-]
-
-# ==============================
-# RUN AI
-# ==============================
+# ======================
+# RUN AI SEARCH
+# ======================
 
 if uploaded_image and run_ai:
 
-    image=preprocess(Image.open(uploaded_image).convert("RGB")).unsqueeze(0).to(device)
+    image = preprocess(Image.open(uploaded_image)).unsqueeze(0).to(device)
 
     with torch.no_grad():
-        image_features=model.encode_image(image)
+        image_features = model.encode_image(image)
 
-    query_embedding=image_features.cpu().numpy()
+    query_embedding = image_features.cpu().numpy()
 
-    style=predict(query_embedding,style_labels).replace("a photo of ","")
-    occasion=predict(query_embedding,occasion_labels).replace("a photo of ","")
-    color=predict(query_embedding,color_labels).replace("a photo of ","")
-    pattern=predict(query_embedding,pattern_labels).replace("a photo of ","")
+    style = predict_label(query_embedding,style_labels)
+    occasion = predict_label(query_embedding,occasion_labels)
 
-    st.session_state.ai_style=style
-    st.session_state.ai_occasion=occasion
-    st.session_state.ai_color=color
-    st.session_state.ai_pattern=pattern
+    style = style.replace("a photo of ","")
+    occasion = occasion.replace("a photo of ","")
 
-    st.session_state.ai_mode=True
+    st.session_state.ai_style = style
+    st.session_state.ai_occasion = occasion
+    st.session_state.ai_mode = True
 
 if clear_ai:
-    st.session_state.ai_mode=False
 
-# ==============================
+    st.session_state.ai_mode = False
+
+# ======================
+# APPLY FILTER
+# ======================
+
+filtered_df = df.copy()
+
+if st.session_state.ai_mode:
+
+    st.sidebar.subheader("AI Recognition")
+
+    st.sidebar.write("Style:",st.session_state.ai_style)
+    st.sidebar.write("Occasion:",st.session_state.ai_occasion)
+
+    style_items = tags_df[
+        tags_df["Tag"]==st.session_state.ai_style
+    ]["ItemID"]
+
+    occasion_items = tags_df[
+        tags_df["Tag"]==st.session_state.ai_occasion
+    ]["ItemID"]
+
+    matched_ids = set(style_items).intersection(set(occasion_items))
+
+    filtered_df = df[df["ItemID"].isin(matched_ids)]
+
+# ======================
+# CELEBRITY STYLE BOOST
+# ======================
+
+if style_tags:
+
+    celeb_styles = [s.strip() for s in style_tags.split(",")]
+
+    celeb_items = tags_df[
+        tags_df["Tag"].isin(celeb_styles)
+    ]["ItemID"].unique()
+
+    celeb_df_filtered = df[df["ItemID"].isin(celeb_items)]
+
+    filtered_df = pd.concat([celeb_df_filtered,filtered_df]).drop_duplicates()
+
+# ======================
 # IMAGE URL
-# ==============================
+# ======================
 
 @st.cache_data
 def get_image_url(item_id):
 
-    extensions=[".jpg",".png",".jpeg",".webp"]
+    extensions = [".jpg",".png",".jpeg",".webp"]
 
     for ext in extensions:
 
-        url=f"{HF_BASE}{item_id}{ext}"
+        url = f"{HF_BASE}{item_id}{ext}"
 
         try:
 
-            r=requests.head(url,timeout=3)
+            r = requests.get(url,timeout=3)
 
             if r.status_code==200:
                 return url
@@ -280,22 +301,102 @@ def get_image_url(item_id):
 
     return "https://via.placeholder.com/400x500?text=No+Image"
 
-# ==============================
+# ======================
 # GRID
-# ==============================
+# ======================
 
-st.subheader(f"{len(df)} items")
+st.subheader(f"{len(filtered_df)} items")
 
-cols=st.columns(4)
+cols = st.columns(4)
 
-for i,row in df.reset_index(drop=True).iterrows():
+for i,row in filtered_df.reset_index(drop=True).iterrows():
 
     with cols[i%4]:
 
-        item_id=row["ItemID"]
-        image_url=get_image_url(item_id)
+        item_id = row["ItemID"]
+        image_url = get_image_url(item_id)
 
-        st.image(image_url,width="stretch")
+        st.image(image_url,use_container_width=True)
 
         st.markdown(f"**{row['Brand']}**")
         st.write(row["Name"])
+
+        item_tags = tags_df[tags_df["ItemID"]==item_id]["Tag"].tolist()
+
+        if item_tags:
+            st.caption(" ".join([f"#{t}" for t in item_tags]))
+
+        if st.button("Preview",key=f"preview_{item_id}"):
+
+            st.session_state.preview_item = row
+
+        if item_id in st.session_state.favorites:
+
+            if st.button("❤️ Remove",key=f"remove_{item_id}"):
+
+                st.session_state.favorites.remove(item_id)
+
+                st.session_state.cart = [
+                    x for x in st.session_state.cart
+                    if x["ItemID"] != item_id
+                ]
+
+                st.rerun()
+
+        else:
+
+            if st.button("🤍 Save",key=f"save_{item_id}"):
+
+                st.session_state.favorites.add(item_id)
+
+                cart_item = {
+                    "ItemID": item_id,
+                    "Brand": row["Brand"],
+                    "Name": row["Name"],
+                    "ImageURL": image_url,
+                    "note":""
+                }
+
+                st.session_state.cart.append(cart_item)
+
+                st.rerun()
+
+        if st.button("Find Similar",key=f"sim_{item_id}"):
+
+            idx = item_index_map.get(item_id)
+
+            if idx is not None:
+
+                query_embedding = embeddings[idx].reshape(1,-1)
+
+                similarity = cosine_similarity(query_embedding,embeddings)[0]
+
+                top_indices = similarity.argsort()[::-1][1:9]
+
+                st.session_state.similar_items = df.iloc[top_indices]
+
+# ======================
+# SIMILAR
+# ======================
+
+if st.session_state.similar_items is not None:
+
+    st.divider()
+    st.subheader("Recommended Similar Items")
+
+    cols = st.columns(4)
+
+    for i,row in st.session_state.similar_items.reset_index(drop=True).iterrows():
+
+        with cols[i%4]:
+
+            image_url = get_image_url(row["ItemID"])
+
+            st.image(image_url,use_container_width=True)
+
+            st.markdown(f"**{row['Brand']}**")
+            st.write(row["Name"])
+
+    if st.button("Close Similar"):
+
+        st.session_state.similar_items = None
