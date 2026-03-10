@@ -2,15 +2,16 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import os
+import requests
 from sklearn.metrics.pairwise import cosine_similarity
 
 st.set_page_config(page_title="Fashion Collection", layout="wide")
 
 st.title("Fashion Collection")
 
-# =====================================
-# BASE DIRECTORY
-# =====================================
+# ==============================
+# PATH
+# ==============================
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -20,9 +21,9 @@ EMBED_PATH = os.path.join(BASE_DIR, "embeddings", "clothing_embeddings.npy")
 
 HF_BASE = "https://huggingface.co/datasets/sherry2026/fashion-clothing-dataset/resolve/main/"
 
-# =====================================
-# Session State
-# =====================================
+# ==============================
+# SESSION STATE
+# ==============================
 
 if "favorites" not in st.session_state:
     st.session_state.favorites = set()
@@ -33,17 +34,12 @@ if "preview_item" not in st.session_state:
 if "similar_items" not in st.session_state:
     st.session_state.similar_items = None
 
-
-# =====================================
-# Load Items
-# =====================================
+# ==============================
+# LOAD ITEMS
+# ==============================
 
 @st.cache_data
 def load_items():
-
-    if not os.path.exists(DATA_PATH):
-        st.error(f"items.csv not found: {DATA_PATH}")
-        st.stop()
 
     df = pd.read_csv(DATA_PATH, encoding="utf-8-sig")
 
@@ -59,17 +55,12 @@ def load_items():
 
 df = load_items()
 
-
-# =====================================
-# Load Embeddings
-# =====================================
+# ==============================
+# LOAD EMBEDDINGS
+# ==============================
 
 @st.cache_data
 def load_embeddings():
-
-    if not os.path.exists(EMBED_PATH):
-        st.error(f"Embedding file not found: {EMBED_PATH}")
-        st.stop()
 
     embeddings = np.load(EMBED_PATH)
 
@@ -80,19 +71,34 @@ embeddings = load_embeddings()
 
 item_index_map = {item: idx for idx, item in enumerate(df["ItemID"])}
 
+# ==============================
+# IMAGE URL (AUTO DETECT EXT)
+# ==============================
 
-# =====================================
-# Image URL
-# =====================================
-
+@st.cache_data
 def get_image_url(item_id):
 
-    return f"{HF_BASE}{item_id}.jpg"
+    extensions = [".jpg", ".png", ".jpeg", ".webp"]
+
+    for ext in extensions:
+
+        url = f"{HF_BASE}{item_id}{ext}"
+
+        try:
+            r = requests.head(url)
+
+            if r.status_code == 200:
+                return url
+
+        except:
+            pass
+
+    return "https://via.placeholder.com/400x500?text=No+Image"
 
 
-# =====================================
-# Sidebar Filters
-# =====================================
+# ==============================
+# SIDEBAR FILTERS
+# ==============================
 
 st.sidebar.header("Filters")
 
@@ -104,10 +110,9 @@ brand_filter = st.sidebar.selectbox("Brand", brands)
 category_filter = st.sidebar.selectbox("Category", categories)
 color_filter = st.sidebar.selectbox("Color", colors)
 
-
-# =====================================
-# Apply Filters
-# =====================================
+# ==============================
+# APPLY FILTERS
+# ==============================
 
 filtered_df = df.copy()
 
@@ -120,10 +125,9 @@ if category_filter != "All":
 if color_filter != "All":
     filtered_df = filtered_df[filtered_df["Color"] == color_filter]
 
-
-# =====================================
-# Clothing Grid
-# =====================================
+# ==============================
+# CLOTHING GRID
+# ==============================
 
 st.subheader(f"{len(filtered_df)} items")
 
@@ -140,35 +144,28 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
         st.image(image_url, use_container_width=True)
 
         st.markdown(f"**{row['Brand']}**")
-
         st.write(row["Name"])
 
         fav_key = f"fav_{item_id}"
         sim_key = f"sim_{item_id}"
         preview_key = f"preview_{item_id}"
 
-
-        # Preview
+        # PREVIEW
         if st.button("Preview", key=preview_key):
-
             st.session_state.preview_item = row
 
-
-        # Favorites
+        # FAVORITES
         if item_id in st.session_state.favorites:
 
             if st.button("❤️ Remove", key=fav_key):
-
                 st.session_state.favorites.remove(item_id)
 
         else:
 
             if st.button("🤍 Save", key=fav_key):
-
                 st.session_state.favorites.add(item_id)
 
-
-        # Similar
+        # SIMILARITY SEARCH
         if st.button("Find Similar", key=sim_key):
 
             idx = item_index_map[item_id]
@@ -181,10 +178,9 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
 
             st.session_state.similar_items = df.iloc[top_indices]
 
-
-# =====================================
-# Similar Items
-# =====================================
+# ==============================
+# SIMILAR ITEMS
+# ==============================
 
 if st.session_state.similar_items is not None:
 
@@ -205,13 +201,11 @@ if st.session_state.similar_items is not None:
             st.image(image_url, use_container_width=True)
 
             st.markdown(f"**{row['Brand']}**")
-
             st.write(row["Name"])
 
-
-# =====================================
-# Preview
-# =====================================
+# ==============================
+# PREVIEW SECTION
+# ==============================
 
 if st.session_state.preview_item is not None:
 
@@ -221,7 +215,7 @@ if st.session_state.preview_item is not None:
 
     st.subheader("Item Preview")
 
-    col1, col2 = st.columns([1,1])
+    col1, col2 = st.columns([1, 1])
 
     with col1:
 
@@ -232,7 +226,6 @@ if st.session_state.preview_item is not None:
     with col2:
 
         st.markdown(f"### {item['Brand']}")
-
         st.write(item["Name"])
 
         st.write("Category:", item["Category"])
@@ -241,3 +234,7 @@ if st.session_state.preview_item is not None:
 
         if st.button("Close Preview"):
             st.session_state.preview_item = None
+
+        if st.button("Close Preview"):
+            st.session_state.preview_item = None
+
