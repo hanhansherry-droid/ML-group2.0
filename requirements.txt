@@ -2,8 +2,7 @@ streamlit
 pandas
 numpy
 scikit-learn
-pillow
-openpyxl
+Pillow
 requests
-setuptools
-clip-anytorch
+torch
+git+https://github.com/openai/CLIP.git
