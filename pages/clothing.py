@@ -9,6 +9,13 @@ st.set_page_config(page_title="AI Fashion Styling", layout="wide")
 st.title("AI Fashion Styling Platform")
 
 # ==============================
+# BASE DIRECTORY (FIX PATH)
+# ==============================
+
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+
+
+# ==============================
 # Session State
 # ==============================
 
@@ -29,7 +36,9 @@ if "similar_items" not in st.session_state:
 @st.cache_data
 def load_items():
 
-    df = pd.read_csv("items.csv", encoding="utf-8-sig")
+    path = os.path.join(BASE_DIR, "items.csv")
+
+    df = pd.read_csv(path, encoding="utf-8-sig")
 
     df.columns = df.columns.str.strip()
 
@@ -52,7 +61,9 @@ df = load_items()
 @st.cache_data
 def load_embeddings():
 
-    return np.load("embeddings/clothing_embeddings.npy")
+    path = os.path.join(BASE_DIR, "embeddings", "clothing_embeddings.npy")
+
+    return np.load(path)
 
 
 embeddings = load_embeddings()
@@ -61,7 +72,7 @@ item_index_map = {item: idx for idx, item in enumerate(df["ItemID"])}
 
 
 # ==============================
-# Find image automatically
+# Find Image
 # ==============================
 
 def find_image(item_id):
@@ -73,7 +84,7 @@ def find_image(item_id):
 
     for ext in extensions:
 
-        path = os.path.join("images", f"{item_id}{ext}")
+        path = os.path.join(BASE_DIR, "images", f"{item_id}{ext}")
 
         if os.path.exists(path):
             return path
@@ -97,17 +108,6 @@ color_filter = st.sidebar.selectbox("Color", colors)
 
 
 # ==============================
-# Style Search
-# ==============================
-
-st.sidebar.header("AI Style Search")
-
-style_query = st.sidebar.text_input("Search style")
-
-search_button = st.sidebar.button("Search")
-
-
-# ==============================
 # Apply Filters
 # ==============================
 
@@ -121,46 +121,6 @@ if category_filter != "All":
 
 if color_filter != "All":
     filtered_df = filtered_df[filtered_df["Color"] == color_filter]
-
-
-# ==============================
-# Style Search Results
-# ==============================
-
-if search_button and style_query != "":
-
-    st.subheader("Style Search Results")
-
-    # placeholder text embedding
-    text_embedding = np.random.rand(1, embeddings.shape[1])
-
-    similarity = cosine_similarity(text_embedding, embeddings)[0]
-
-    top_indices = similarity.argsort()[::-1][:8]
-
-    cols = st.columns(4)
-
-    for i, idx in enumerate(top_indices):
-
-        item = df.iloc[idx]
-
-        with cols[i % 4]:
-
-            image = find_image(item["ItemID"])
-
-            if image:
-                st.image(image, use_container_width=True)
-            else:
-                st.image(
-                    "https://via.placeholder.com/400x500?text=No+Image",
-                    use_container_width=True
-                )
-
-            st.markdown(f"**{item['Brand']}**")
-
-            st.write(item["Name"])
-
-    st.divider()
 
 
 # ==============================
@@ -195,19 +155,13 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
         sim_key = f"sim_{i}"
         preview_key = f"preview_{i}"
 
-        # =======================
         # Preview
-        # =======================
-
         if st.button("Preview", key=preview_key):
 
             st.session_state.preview_item = row
 
 
-        # =======================
         # Favorites
-        # =======================
-
         if item_id in st.session_state.favorites:
 
             if st.button("❤️ Remove", key=fav_key):
@@ -221,10 +175,7 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
                 st.session_state.favorites.add(item_id)
 
 
-        # =======================
         # Find Similar
-        # =======================
-
         if st.button("Find Similar", key=sim_key):
 
             idx = item_index_map[item_id]
