@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 import os
+import requests
+from PIL import Image
+from io import BytesIO
 
 st.set_page_config(page_title="Select Celebrity", layout="wide")
 
@@ -17,6 +20,10 @@ CELEB_PATH = os.path.join(BASE_DIR, "celebrities.xlsx")
 def load_celebrities():
     df = pd.read_excel(CELEB_PATH)
     df.columns = df.columns.str.strip()
+
+    if "ImageURL" in df.columns:
+        df["ImageURL"] = df["ImageURL"].astype(str).str.strip()
+
     return df
 
 celeb_df = load_celebrities()
@@ -40,8 +47,23 @@ for i, row in celeb_df.iterrows():
 
         st.subheader(row["Name"])
 
+        # ===== safer image loading =====
         if "ImageURL" in celeb_df.columns:
-            st.image(row["ImageURL"], use_container_width=True)
+
+            url = row["ImageURL"]
+
+            try:
+                if isinstance(url, str) and url.startswith("http"):
+
+                    response = requests.get(url)
+                    img = Image.open(BytesIO(response.content))
+                    st.image(img, use_container_width=True)
+
+                else:
+                    st.warning("Image not available")
+
+            except:
+                st.warning("Image failed to load")
 
         st.write(row["Description"])
 
