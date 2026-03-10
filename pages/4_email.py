@@ -69,7 +69,7 @@ if selected_celebrity is None:
 
     st.warning("Please select a celebrity first.")
 
-    if st.button("Go to Celebrity Page", key="go_celeb"):
+    if st.button("Go to Celebrity Page"):
         st.switch_page("pages/1_celebrity.py")
 
     st.stop()
@@ -107,7 +107,7 @@ if len(items) == 0:
 
     st.warning("No clothing selected")
 
-    if st.button("Go to Clothing", key="go_clothing"):
+    if st.button("Go to Clothing"):
         st.switch_page("pages/2_clothing.py")
 
     st.stop()
@@ -149,7 +149,7 @@ event_name = st.text_input("Event Name")
 event_intro = st.text_area("Event Introduction")
 
 # ======================
-# Gmail send (CID images)
+# Gmail send
 # ======================
 
 def send_email(to_email, subject, html, brand_items):
@@ -168,10 +168,14 @@ def send_email(to_email, subject, html, brand_items):
 
     msg_alt.attach(MIMEText(html, "html"))
 
-    # attach images
     for i,item in enumerate(brand_items):
 
-        img_data = requests.get(item["ImageURL"]).content
+        response = requests.get(item["ImageURL"], timeout=10)
+
+        if response.status_code != 200:
+            continue
+
+        img_data = response.content
 
         image = MIMEImage(img_data)
 
@@ -193,7 +197,9 @@ def send_email(to_email, subject, html, brand_items):
 
 st.divider()
 
-if st.button("Generate Emails", key="generate_email"):
+sent_brands = []
+
+if st.button("Generate Emails"):
 
     for brand, brand_items in brand_groups.items():
 
@@ -238,7 +244,6 @@ if st.button("Generate Emails", key="generate_email"):
 
         st.markdown(f"### Email Preview — {brand}")
 
-        # preview images still use URL
         preview_html = ""
 
         for item in brand_items:
@@ -280,10 +285,10 @@ if st.button("Generate Emails", key="generate_email"):
                 brand_items
             )
 
-            st.success(f"Email sent to {brand}!")
+            sent_brands.append(brand)
 
 # ======================
-# SAMPLE SELECTION BOARD
+# Sample Board
 # ======================
 
 st.divider()
@@ -302,11 +307,23 @@ for i,item in enumerate(items):
         st.caption(item["Name"])
 
 # ======================
-# BACK BUTTON
+# Send Success Message
+# ======================
+
+if len(sent_brands) > 0:
+
+    st.divider()
+
+    st.success(
+        "Emails successfully sent to: " + ", ".join(sent_brands)
+    )
+
+# ======================
+# Back Button
 # ======================
 
 st.divider()
 
-if st.button("Back to Cart", key="back_cart"):
+if st.button("Back to Cart"):
 
     st.switch_page("pages/3_cart.py")
