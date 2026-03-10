@@ -14,6 +14,7 @@ st.title("AI Fashion Styling Platform")
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
+
 # ==============================
 # Session State
 # ==============================
@@ -29,7 +30,7 @@ if "similar_items" not in st.session_state:
 
 
 # ==============================
-# Load Data
+# Load Items CSV
 # ==============================
 
 @st.cache_data
@@ -39,11 +40,16 @@ def load_items():
 
     df = pd.read_csv(path, encoding="utf-8-sig")
 
+    # clean column names
     df.columns = df.columns.str.strip()
 
-    df["ItemID"] = df["ItemID"].astype(str).str.strip()
+    # remove No. column if exists
+    if "No." in df.columns:
+        df = df.drop(columns=["No."])
 
-    df = df[df["ItemID"] != "nan"]
+    # clean fields
+    df["ItemID"] = df["ItemID"].astype(str).str.strip()
+    df["ImageURL"] = df["ImageURL"].astype(str).str.strip()
 
     df = df.reset_index(drop=True)
 
@@ -115,9 +121,9 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
 
         item_id = row["ItemID"]
 
-        image_url = row.get("ImageURL", None)
+        image_url = row["ImageURL"]
 
-        if pd.notna(image_url):
+        if image_url and image_url != "nan":
             st.image(image_url, use_container_width=True)
         else:
             st.image(
@@ -179,9 +185,9 @@ if st.session_state.similar_items is not None:
 
         with cols[i % 4]:
 
-            image_url = row.get("ImageURL", None)
+            image_url = row["ImageURL"]
 
-            if pd.notna(image_url):
+            if image_url and image_url != "nan":
                 st.image(image_url, use_container_width=True)
             else:
                 st.image(
@@ -205,13 +211,13 @@ if st.session_state.preview_item is not None:
 
     st.subheader("Item Preview")
 
-    col1, col2 = st.columns([1,1])
+    col1, col2 = st.columns([1, 1])
 
     with col1:
 
-        image_url = item.get("ImageURL", None)
+        image_url = item["ImageURL"]
 
-        if pd.notna(image_url):
+        if image_url and image_url != "nan":
             st.image(image_url, use_container_width=True)
         else:
             st.image(
@@ -231,8 +237,4 @@ if st.session_state.preview_item is not None:
 
         if st.button("Close Preview"):
             st.session_state.preview_item = None
-
-            st.session_state.preview_item = None
-
-
 
