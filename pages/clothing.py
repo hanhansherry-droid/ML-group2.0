@@ -171,46 +171,95 @@ if style_filter:
 # AI AGENT
 # ==============================
 
+# ==============================
+# AI AGENT (HUGGINGFACE)
+# ==============================
+
 def ai_agent(filtered_items):
 
-    api_key = st.secrets["huggingface"]["api_key"]
+    try:
+        api_key = st.secrets["huggingface"]["api_key"]
+    except:
+        return "⚠️ HuggingFace API key not configured."
+
+    if len(filtered_items) == 0:
+        return "No clothing items match the selected filters."
+
+    # 提取可用信息
+    brands = ", ".join(filtered_items["Brand"].unique()[:5])
+    categories = ", ".join(filtered_items["Category"].unique()[:5])
+    colors = ", ".join(filtered_items["Color"].unique()[:5])
+
+    occasions = ", ".join(occasion_filter) if occasion_filter else "Any"
+    styles = ", ".join(style_filter) if style_filter else "Any"
+
+    # celebrity style hints
+    celebrity_style = {
+        "Jennie": "chic, feminine, luxury street style",
+        "Lisa": "bold, edgy, Y2K stage fashion",
+        "Zendaya": "high fashion, avant-garde red carpet",
+        "Taylor Swift": "elegant, vintage inspired",
+        "Rihanna": "experimental, statement fashion"
+    }
+
+    style_hint = celebrity_style.get(celebrity, "")
 
     prompt = f"""
-You are a professional fashion stylist.
+You are a professional celebrity stylist.
 
 Celebrity: {celebrity}
+Celebrity fashion style: {style_hint}
 
-Filters:
+User filters:
 Brand: {brand_multi}
 Category: {category_multi}
 Color: {color_multi}
-Occasion: {occasion_filter}
-Style: {style_filter}
+Occasion: {occasions}
+Style: {styles}
 
-Items available:
-{filtered_items.head(10).to_dict()}
+Available clothing inventory:
+Brands: {brands}
+Categories: {categories}
+Colors: {colors}
 
-Recommend suitable clothing pieces and explain why.
+Based on the celebrity style and filters, recommend suitable clothing items
+and explain the styling reasoning in a concise way.
 """
 
-    response = requests.post(
-        "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
-        headers={"Authorization": f"Bearer {api_key}"},
-        json={"inputs":prompt}
-    )
+    headers = {
+        "Authorization": f"Bearer {api_key}"
+    }
+
+    payload = {
+        "inputs": prompt,
+        "parameters": {
+            "max_new_tokens": 150,
+            "temperature": 0.7
+        }
+    }
 
     try:
-        return response.json()[0]["generated_text"]
-    except:
-        return "AI stylist unavailable."
 
+        response = requests.post(
+            "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta",
+            headers=headers,
+            json=payload,
+            timeout=60
+        )
 
-if st.sidebar.button("Generate AI Styling Advice"):
+        if response.status_code != 200:
+            return f"⚠️ HuggingFace API error: {response.status_code}"
 
-    advice = ai_agent(filtered_df)
+        result = response.json()
 
-    st.sidebar.write(advice)
+        if isinstance(result, list):
+            return result[0]["generated_text"]
 
+        return str(result)
+
+    except Exception as e:
+
+        return f"⚠️ AI stylist unavailable: {e}"
 # ==============================
 # GRID
 # ==============================
@@ -325,3 +374,4 @@ if st.session_state.preview_item is not None:
 
         if st.button("Close Preview"):
             st.session_state.preview_item=None
+
