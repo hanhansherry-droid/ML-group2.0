@@ -27,34 +27,33 @@ HF_BASE = "https://huggingface.co/datasets/sherry2026/fashion-clothing-dataset/r
 # ==============================
 
 if "favorites" not in st.session_state:
-    st.session_state.favorites = set()
+    st.session_state.favorites=set()
 
 if "preview_item" not in st.session_state:
-    st.session_state.preview_item = None
+    st.session_state.preview_item=None
 
 if "similar_items" not in st.session_state:
-    st.session_state.similar_items = None
+    st.session_state.similar_items=None
 
 # ==============================
-# LOAD DATA
+# LOAD ITEMS
 # ==============================
 
 @st.cache_data
 def load_items():
 
-    df = pd.read_csv(DATA_PATH, encoding="utf-8-sig")
+    df=pd.read_csv(DATA_PATH,encoding="utf-8-sig")
 
-    df.columns = df.columns.str.strip()
+    df.columns=df.columns.str.strip()
 
     if "No." in df.columns:
-        df = df.drop(columns=["No."])
+        df=df.drop(columns=["No."])
 
-    df["ItemID"] = df["ItemID"].astype(str).str.strip()
+    df["ItemID"]=df["ItemID"].astype(str).str.strip()
 
     return df
 
-
-df = load_items()
+df=load_items()
 
 # ==============================
 # LOAD TAGS
@@ -65,16 +64,17 @@ def load_tags():
 
     if os.path.exists(TAGS_PATH):
 
-        tags = pd.read_excel(TAGS_PATH)
+        tags=pd.read_excel(TAGS_PATH)
 
-        tags["ItemID"] = tags["ItemID"].astype(str).str.strip()
+        tags.columns=tags.columns.str.strip()
+
+        tags["ItemID"]=tags["ItemID"].astype(str).str.strip()
 
         return tags
 
     return pd.DataFrame(columns=["ItemID","TagType","Tag"])
 
-
-tags_df = load_tags()
+tags_df=load_tags()
 
 # ==============================
 # LOAD CELEBRITIES
@@ -83,18 +83,17 @@ tags_df = load_tags()
 @st.cache_data
 def load_celebrities():
 
-    if os.path.exists(CELEB_PATH):
+    if not os.path.exists(CELEB_PATH):
 
-        df = pd.read_excel(CELEB_PATH)
+        return pd.DataFrame(columns=["Name","Description","Style Tags"])
 
-        df.columns = df.columns.str.strip()
+    df=pd.read_excel(CELEB_PATH)
 
-        return df
+    df.columns=df.columns.str.strip()
 
-    return pd.DataFrame(columns=["Celebrity","Style","Description"])
+    return df
 
-
-celeb_df = load_celebrities()
+celeb_df=load_celebrities()
 
 # ==============================
 # LOAD EMBEDDINGS
@@ -105,29 +104,28 @@ def load_embeddings():
 
     return np.load(EMBED_PATH)
 
+embeddings=load_embeddings()
 
-embeddings = load_embeddings()
-
-item_index_map = {item: idx for idx,item in enumerate(df["ItemID"])}
+item_index_map={item:idx for idx,item in enumerate(df["ItemID"])}
 
 # ==============================
-# IMAGE URL (保持原逻辑)
+# IMAGE URL
 # ==============================
 
 @st.cache_data
 def get_image_url(item_id):
 
-    extensions = [".jpg",".png",".jpeg",".webp"]
+    extensions=[".jpg",".png",".jpeg",".webp"]
 
     for ext in extensions:
 
-        url = f"{HF_BASE}{item_id}{ext}"
+        url=f"{HF_BASE}{item_id}{ext}"
 
         try:
 
-            r = requests.get(url)
+            r=requests.get(url)
 
-            if r.status_code == 200:
+            if r.status_code==200:
                 return url
 
         except:
@@ -141,69 +139,69 @@ def get_image_url(item_id):
 
 st.sidebar.header("Filters")
 
-brand_multi = st.sidebar.multiselect(
+brand_multi=st.sidebar.multiselect(
     "Brand",
     sorted(df["Brand"].dropna().unique())
 )
 
-category_multi = st.sidebar.multiselect(
+category_multi=st.sidebar.multiselect(
     "Category",
     sorted(df["Category"].dropna().unique())
 )
 
-color_multi = st.sidebar.multiselect(
+color_multi=st.sidebar.multiselect(
     "Color",
     sorted(df["Color"].dropna().unique())
 )
 
 # TAG FILTER
 
-occasion_tags = tags_df[tags_df["TagType"]=="Occasion"]["Tag"].unique()
-style_tags = tags_df[tags_df["TagType"]=="Style"]["Tag"].unique()
+occasion_tags=tags_df[tags_df["TagType"]=="Occasion"]["Tag"].unique()
+style_tags=tags_df[tags_df["TagType"]=="Style"]["Tag"].unique()
 
-occasion_filter = st.sidebar.multiselect("Occasion",sorted(occasion_tags))
-style_filter = st.sidebar.multiselect("Style",sorted(style_tags))
+occasion_filter=st.sidebar.multiselect("Occasion",sorted(occasion_tags))
+style_filter=st.sidebar.multiselect("Style",sorted(style_tags))
 
 # ==============================
 # CELEBRITY SELECTOR
 # ==============================
 
-celebrity_list = celeb_df["Celebrity"].dropna().unique().tolist()
+celebrity_list=celeb_df["Name"].dropna().unique().tolist()
 
-celebrity = st.sidebar.selectbox("Celebrity",celebrity_list)
+celebrity=st.sidebar.selectbox("Celebrity",celebrity_list)
 
 # ==============================
 # APPLY FILTER
 # ==============================
 
-filtered_df = df.copy()
+filtered_df=df.copy()
 
 if brand_multi:
-    filtered_df = filtered_df[filtered_df["Brand"].isin(brand_multi)]
+    filtered_df=filtered_df[filtered_df["Brand"].isin(brand_multi)]
 
 if category_multi:
-    filtered_df = filtered_df[filtered_df["Category"].isin(category_multi)]
+    filtered_df=filtered_df[filtered_df["Category"].isin(category_multi)]
 
 if color_multi:
-    filtered_df = filtered_df[filtered_df["Color"].isin(color_multi)]
+    filtered_df=filtered_df[filtered_df["Color"].isin(color_multi)]
 
 if occasion_filter:
 
-    item_ids = tags_df[
+    item_ids=tags_df[
         tags_df["Tag"].isin(occasion_filter)
     ]["ItemID"].unique()
 
-    filtered_df = filtered_df[
+    filtered_df=filtered_df[
         filtered_df["ItemID"].isin(item_ids)
     ]
 
 if style_filter:
 
-    item_ids = tags_df[
+    item_ids=tags_df[
         tags_df["Tag"].isin(style_filter)
     ]["ItemID"].unique()
 
-    filtered_df = filtered_df[
+    filtered_df=filtered_df[
         filtered_df["ItemID"].isin(item_ids)
     ]
 
@@ -213,16 +211,16 @@ if style_filter:
 
 def get_celebrity_style(name):
 
-    row = celeb_df[celeb_df["Celebrity"] == name]
+    row=celeb_df[celeb_df["Name"]==name]
 
-    if len(row) > 0:
+    if len(row)>0:
 
-        style = row.iloc[0]["Style"]
-        description = row.iloc[0]["Description"]
+        description=row.iloc[0]["Description"]
+        style=row.iloc[0]["Style Tags"]
 
-        return style, description
+        return style,description
 
-    return "", ""
+    return "",""
 
 # ==============================
 # AI STYLIST
@@ -231,51 +229,50 @@ def get_celebrity_style(name):
 def ai_agent(filtered_items):
 
     try:
-        api_key = st.secrets["huggingface"]["api_key"]
+        api_key=st.secrets["huggingface"]["api_key"]
     except:
-        return "⚠️ HuggingFace API key not configured."
+        return "HuggingFace API key missing."
 
-    if len(filtered_items) == 0:
-        return "No clothing items match the selected filters."
+    if len(filtered_items)==0:
+        return "No clothing items match the filters."
 
-    style_hint, celeb_description = get_celebrity_style(celebrity)
+    style_hint,celeb_description=get_celebrity_style(celebrity)
 
-    brands = ", ".join(filtered_items["Brand"].unique()[:5])
-    categories = ", ".join(filtered_items["Category"].unique()[:5])
-    colors = ", ".join(filtered_items["Color"].unique()[:5])
+    brands=", ".join(filtered_items["Brand"].unique()[:5])
+    categories=", ".join(filtered_items["Category"].unique()[:5])
+    colors=", ".join(filtered_items["Color"].unique()[:5])
 
     prompt=f"""
-You are a professional celebrity stylist.
+You are a professional fashion stylist.
 
 Celebrity: {celebrity}
 
-Celebrity style: {style_hint}
+Celebrity style tags:
+{style_hint}
 
-Style description:
+Celebrity description:
 {celeb_description}
 
-User Filters:
+Filters applied:
 Brand: {brand_multi}
 Category: {category_multi}
 Color: {color_multi}
 Occasion: {occasion_filter}
 Style: {style_filter}
 
-Available clothing inventory:
+Available inventory:
 Brands: {brands}
 Categories: {categories}
 Colors: {colors}
 
-Recommend suitable clothing pieces and explain why they match the celebrity style.
+Recommend clothing pieces suitable for the celebrity and explain the styling logic.
 """
 
     headers={"Authorization":f"Bearer {api_key}"}
 
     payload={
         "inputs":prompt,
-        "parameters":{
-            "max_new_tokens":150
-        }
+        "parameters":{"max_new_tokens":150}
     }
 
     response=requests.post(
@@ -360,7 +357,7 @@ for i,row in filtered_df.reset_index(drop=True).iterrows():
             st.session_state.similar_items=df.iloc[top_indices]
 
 # ==============================
-# SIMILAR
+# SIMILAR ITEMS
 # ==============================
 
 if st.session_state.similar_items is not None:
@@ -420,6 +417,5 @@ if st.session_state.preview_item is not None:
 
         if st.button("Close Preview"):
             st.session_state.preview_item=None
-        if st.button("Close Preview"):
-            st.session_state.preview_item=None
+
 
