@@ -50,7 +50,7 @@ def load_clip():
 
     device="cuda" if torch.cuda.is_available() else "cpu"
 
-    model,preprocess=clip.load("RN50",device=device)
+    model,preprocess=clip.load("ViT-B/32",device=device)
 
     return model,preprocess,device
 
@@ -139,9 +139,7 @@ def get_celebrity_style(name):
 
     if len(row)>0:
 
-        style=row.iloc[0]["Style Tags"]
-
-        return style
+        return row.iloc[0]["Style Tags"]
 
     return ""
 
@@ -247,12 +245,6 @@ color_multi=st.sidebar.multiselect(
 sorted(df["Color"].dropna().unique())
 )
 
-occasion_tags=tags_df[tags_df["TagType"]=="Occasion"]["Tag"].unique()
-style_tags_filter=tags_df[tags_df["TagType"]=="Style"]["Tag"].unique()
-
-occasion_filter=st.sidebar.multiselect("Occasion",sorted(occasion_tags))
-style_filter=st.sidebar.multiselect("Style",sorted(style_tags_filter))
-
 # ==============================
 # APPLY FILTER
 # ==============================
@@ -293,14 +285,16 @@ if st.session_state.ai_mode:
 
     filtered_df=filtered_df[filtered_df["ItemID"].isin(item_ids)]
 
-    # fallback to embedding similarity
+    # fallback similarity
     if len(filtered_df)==0 and query_embedding is not None:
 
-        similarity=cosine_similarity(query_embedding,embeddings)[0]
+        if query_embedding.shape[1]==embeddings.shape[1]:
 
-        top_indices=similarity.argsort()[::-1][:12]
+            similarity=cosine_similarity(query_embedding,embeddings)[0]
 
-        filtered_df=df.iloc[top_indices]
+            top_indices=similarity.argsort()[::-1][:12]
+
+            filtered_df=df.iloc[top_indices]
 
 # ==============================
 # CELEBRITY STYLE BOOST
