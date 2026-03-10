@@ -4,5 +4,5 @@ numpy
 scikit-learn
 Pillow
 requests
-torch==2.2.2
+torch
 git+https://github.com/openai/CLIP.git
