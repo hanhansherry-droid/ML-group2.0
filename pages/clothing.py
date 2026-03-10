@@ -95,62 +95,42 @@ def get_image_url(item_id):
 
     return "https://via.placeholder.com/400x500?text=No+Image"
 
+
 # ==============================
-# SIDEBAR FILTERS
+# SIDEBAR FILTERS (MULTI)
 # ==============================
 
 st.sidebar.header("Filters")
 
-brands = ["All"] + sorted(df["Brand"].dropna().unique().tolist())
-categories = ["All"] + sorted(df["Category"].dropna().unique().tolist())
-colors = ["All"] + sorted(df["Color"].dropna().unique().tolist())
-
-brand_filter = st.sidebar.selectbox("Brand", brands)
-category_filter = st.sidebar.selectbox("Category", categories)
-color_filter = st.sidebar.selectbox("Color", colors)
-
-# ==============================
-# NEW MULTI SELECT FILTERS
-# ==============================
-
 brand_multi = st.sidebar.multiselect(
-    "Brand (Multiple)",
+    "Brand",
     options=sorted(df["Brand"].dropna().unique()),
     default=st.session_state.get("brand_multi", [])
 )
 
 category_multi = st.sidebar.multiselect(
-    "Category (Multiple)",
+    "Category",
     options=sorted(df["Category"].dropna().unique()),
     default=st.session_state.get("category_multi", [])
 )
 
 color_multi = st.sidebar.multiselect(
-    "Color (Multiple)",
+    "Color",
     options=sorted(df["Color"].dropna().unique()),
     default=st.session_state.get("color_multi", [])
 )
 
+# 保存选择状态
 st.session_state["brand_multi"] = brand_multi
 st.session_state["category_multi"] = category_multi
 st.session_state["color_multi"] = color_multi
+
 
 # ==============================
 # APPLY FILTERS
 # ==============================
 
 filtered_df = df.copy()
-
-if brand_filter != "All":
-    filtered_df = filtered_df[filtered_df["Brand"] == brand_filter]
-
-if category_filter != "All":
-    filtered_df = filtered_df[filtered_df["Category"] == category_filter]
-
-if color_filter != "All":
-    filtered_df = filtered_df[filtered_df["Color"] == color_filter]
-
-# MULTI FILTER (新增，不影响原逻辑)
 
 if len(brand_multi) > 0:
     filtered_df = filtered_df[filtered_df["Brand"].isin(brand_multi)]
@@ -159,7 +139,8 @@ if len(category_multi) > 0:
     filtered_df = filtered_df[filtered_df["Category"].isin(category_multi)]
 
 if len(color_multi) > 0:
-    filtered_df = filtered_df[filtered_df["Color"].isin(color_multi)]
+    filtered_df = filtered_df[filtered_df["Color"].isin(color_multi])
+
 
 # ==============================
 # CLOTHING GRID
@@ -214,6 +195,7 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
 
             st.session_state.similar_items = df.iloc[top_indices]
 
+
 # ==============================
 # SIMILAR ITEMS
 # ==============================
@@ -238,6 +220,7 @@ if st.session_state.similar_items is not None:
 
             st.markdown(f"**{row['Brand']}**")
             st.write(row["Name"])
+
 
 # ==============================
 # PREVIEW SECTION
