@@ -2,12 +2,11 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import os
-import requests
 from sklearn.metrics.pairwise import cosine_similarity
 
-st.set_page_config(page_title="AI Fashion Styling", layout="wide")
+st.set_page_config(page_title="Fashion Collection", layout="wide")
 
-st.title("AI Fashion Styling Platform")
+st.title("Fashion Collection")
 
 # ==============================
 # BASE DIRECTORY
@@ -15,7 +14,10 @@ st.title("AI Fashion Styling Platform")
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
-# HuggingFace dataset base url
+DATA_PATH = os.path.join(BASE_DIR, "items.csv")
+
+EMBED_PATH = os.path.join(BASE_DIR, "embeddings", "clothing_embeddings.npy")
+
 HF_BASE = "https://huggingface.co/datasets/sherry2026/fashion-clothing-dataset/resolve/main/"
 
 # ==============================
@@ -33,15 +35,13 @@ if "similar_items" not in st.session_state:
 
 
 # ==============================
-# Load CSV
+# Load Items
 # ==============================
 
 @st.cache_data
 def load_items():
 
-    path = os.path.join(BASE_DIR, "items.csv")
-
-    df = pd.read_csv(path, encoding="utf-8-sig")
+    df = pd.read_csv(DATA_PATH, encoding="utf-8-sig")
 
     df.columns = df.columns.str.strip()
 
@@ -65,9 +65,9 @@ df = load_items()
 @st.cache_data
 def load_embeddings():
 
-    path = os.path.join(BASE_DIR, "embeddings", "clothing_embeddings.npy")
+    embeddings = np.load(EMBED_PATH)
 
-    return np.load(path)
+    return embeddings
 
 
 embeddings = load_embeddings()
@@ -76,28 +76,12 @@ item_index_map = {item: idx for idx, item in enumerate(df["ItemID"])}
 
 
 # ==============================
-# Auto Detect Image URL
+# Image URL
 # ==============================
 
-@st.cache_data
 def get_image_url(item_id):
 
-    extensions = [".jpg", ".png", ".jpeg", ".webp"]
-
-    for ext in extensions:
-
-        url = f"{HF_BASE}{item_id}{ext}"
-
-        try:
-            r = requests.head(url)
-
-            if r.status_code == 200:
-                return url
-
-        except:
-            pass
-
-    return None
+    return f"{HF_BASE}{item_id}.jpg"
 
 
 # ==============================
@@ -107,11 +91,15 @@ def get_image_url(item_id):
 st.sidebar.header("Filters")
 
 brands = ["All"] + sorted(df["Brand"].dropna().unique().tolist())
+
 categories = ["All"] + sorted(df["Category"].dropna().unique().tolist())
+
 colors = ["All"] + sorted(df["Color"].dropna().unique().tolist())
 
 brand_filter = st.sidebar.selectbox("Brand", brands)
+
 category_filter = st.sidebar.selectbox("Category", categories)
+
 color_filter = st.sidebar.selectbox("Color", colors)
 
 
@@ -147,37 +135,40 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
 
         image_url = get_image_url(item_id)
 
-        if image_url:
-            st.image(image_url, use_container_width=True)
-        else:
-            st.image(
-                "https://via.placeholder.com/400x500?text=No+Image",
-                use_container_width=True
-            )
+        st.image(image_url, use_container_width=True)
 
         st.markdown(f"**{row['Brand']}**")
+
         st.write(row["Name"])
 
-        fav_key = f"fav_{i}"
-        sim_key = f"sim_{i}"
-        preview_key = f"preview_{i}"
+        fav_key = f"fav_{item_id}"
+
+        sim_key = f"sim_{item_id}"
+
+        preview_key = f"preview_{item_id}"
+
 
         # Preview
         if st.button("Preview", key=preview_key):
+
             st.session_state.preview_item = row
+
 
         # Favorites
         if item_id in st.session_state.favorites:
 
             if st.button("❤️ Remove", key=fav_key):
+
                 st.session_state.favorites.remove(item_id)
 
         else:
 
             if st.button("🤍 Save", key=fav_key):
+
                 st.session_state.favorites.add(item_id)
 
-        # Find Similar
+
+        # Similar
         if st.button("Find Similar", key=sim_key):
 
             idx = item_index_map[item_id]
@@ -211,15 +202,10 @@ if st.session_state.similar_items is not None:
 
             image_url = get_image_url(row["ItemID"])
 
-            if image_url:
-                st.image(image_url, use_container_width=True)
-            else:
-                st.image(
-                    "https://via.placeholder.com/400x500",
-                    use_container_width=True
-                )
+            st.image(image_url, use_container_width=True)
 
             st.markdown(f"**{row['Brand']}**")
+
             st.write(row["Name"])
 
 
@@ -241,13 +227,7 @@ if st.session_state.preview_item is not None:
 
         image_url = get_image_url(item["ItemID"])
 
-        if image_url:
-            st.image(image_url, use_container_width=True)
-        else:
-            st.image(
-                "https://via.placeholder.com/400x500",
-                use_container_width=True
-            )
+        st.image(image_url, use_container_width=True)
 
     with col2:
 
@@ -256,8 +236,12 @@ if st.session_state.preview_item is not None:
         st.write(item["Name"])
 
         st.write("Category:", item["Category"])
+
         st.write("Color:", item["Color"])
+
         st.write("Season:", item["Season"])
 
+
         if st.button("Close Preview"):
+
             st.session_state.preview_item = None
