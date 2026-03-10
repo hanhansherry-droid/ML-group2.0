@@ -18,13 +18,15 @@ if "favorites" not in st.session_state:
 # ======================
 @st.cache_data
 def load_items():
-    df = pd.read_excel("items.xlsx")
+
+    df = pd.read_csv("items.csv", encoding="utf-8-sig")
     df.columns = df.columns.str.strip()
 
     df["ItemID"] = df["ItemID"].astype(str)
     df = df[df["ItemID"] != "nan"]
 
     df = df.reset_index(drop=True)
+
     return df
 
 
@@ -126,4 +128,5 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
                     st.image(sim_image, width=120)
 
                 st.write(sim_item["Brand"], "-", sim_item["Name"])
+
 
