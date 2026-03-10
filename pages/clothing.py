@@ -19,6 +19,8 @@ DATA_PATH = os.path.join(BASE_DIR, "items.csv")
 
 EMBED_PATH = os.path.join(BASE_DIR, "embeddings", "clothing_embeddings.npy")
 
+TAGS_PATH = os.path.join(BASE_DIR, "tags.xlsx")
+
 HF_BASE = "https://huggingface.co/datasets/sherry2026/fashion-clothing-dataset/resolve/main/"
 
 # ==============================
@@ -56,6 +58,26 @@ def load_items():
 df = load_items()
 
 # ==============================
+# LOAD TAGS
+# ==============================
+
+@st.cache_data
+def load_tags():
+
+    if os.path.exists(TAGS_PATH):
+
+        tags = pd.read_excel(TAGS_PATH)
+
+        tags["ItemID"] = tags["ItemID"].astype(str).str.strip()
+
+        return tags
+
+    return pd.DataFrame(columns=["ItemID", "TagType", "Tag"])
+
+
+tags_df = load_tags()
+
+# ==============================
 # LOAD EMBEDDINGS
 # ==============================
 
@@ -72,7 +94,7 @@ embeddings = load_embeddings()
 item_index_map = {item: idx for idx, item in enumerate(df["ItemID"])}
 
 # ==============================
-# IMAGE URL (不要改)
+# IMAGE URL (完全不动)
 # ==============================
 
 @st.cache_data
@@ -96,27 +118,40 @@ def get_image_url(item_id):
     return "https://via.placeholder.com/400x500?text=No+Image"
 
 # ==============================
-# SIDEBAR FILTERS (MULTI)
+# SIDEBAR FILTERS
 # ==============================
 
 st.sidebar.header("Filters")
 
 brand_multi = st.sidebar.multiselect(
     "Brand",
-    options=sorted(df["Brand"].dropna().unique()),
-    default=[]
+    options=sorted(df["Brand"].dropna().unique())
 )
 
 category_multi = st.sidebar.multiselect(
     "Category",
-    options=sorted(df["Category"].dropna().unique()),
-    default=[]
+    options=sorted(df["Category"].dropna().unique())
 )
 
 color_multi = st.sidebar.multiselect(
     "Color",
-    options=sorted(df["Color"].dropna().unique()),
-    default=[]
+    options=sorted(df["Color"].dropna().unique())
+)
+
+# TAG FILTERS
+
+occasion_tags = tags_df[tags_df["TagType"] == "Occasion"]["Tag"].unique()
+
+style_tags = tags_df[tags_df["TagType"] == "Style"]["Tag"].unique()
+
+occasion_filter = st.sidebar.multiselect(
+    "Occasion",
+    options=sorted(occasion_tags)
+)
+
+style_filter = st.sidebar.multiselect(
+    "Style",
+    options=sorted(style_tags)
 )
 
 # ==============================
@@ -134,45 +169,23 @@ if len(category_multi) > 0:
 if len(color_multi) > 0:
     filtered_df = filtered_df[filtered_df["Color"].isin(color_multi)]
 
-# ==============================
-# AI STYLIST AGENT
-# ==============================
+# TAG FILTER
 
-def ai_stylist_agent(filtered_items):
+if len(occasion_filter) > 0:
 
-    if len(filtered_items) == 0:
-        return "No items match the selected filters."
+    item_ids = tags_df[
+        tags_df["Tag"].isin(occasion_filter)
+    ]["ItemID"].unique()
 
-    brands = filtered_items["Brand"].unique()
-    categories = filtered_items["Category"].unique()
-    colors = filtered_items["Color"].unique()
+    filtered_df = filtered_df[filtered_df["ItemID"].isin(item_ids)]
 
-    text = f"""
-    AI Stylist Insight:
+if len(style_filter) > 0:
 
-    This selection highlights {len(filtered_items)} curated fashion items.
+    item_ids = tags_df[
+        tags_df["Tag"].isin(style_filter)
+    ]["ItemID"].unique()
 
-    Brands included: {", ".join(brands[:5])}
-
-    Categories: {", ".join(categories)}
-
-    Dominant colors: {", ".join(colors)}
-
-    Styling suggestion:
-    Combine statement pieces with neutral layers to create a balanced runway-inspired look.
-    """
-
-    return text
-
-
-st.sidebar.divider()
-st.sidebar.subheader("AI Stylist")
-
-if st.sidebar.button("Generate Styling Advice"):
-
-    advice = ai_stylist_agent(filtered_df)
-
-    st.sidebar.write(advice)
+    filtered_df = filtered_df[filtered_df["ItemID"].isin(item_ids)]
 
 # ==============================
 # CLOTHING GRID
@@ -194,6 +207,13 @@ for i, row in filtered_df.reset_index(drop=True).iterrows():
 
         st.markdown(f"**{row['Brand']}**")
         st.write(row["Name"])
+
+        # SHOW TAGS
+
+        item_tags = tags_df[tags_df["ItemID"] == item_id]["Tag"].tolist()
+
+        if len(item_tags) > 0:
+            st.caption(" ".join([f"#{t}" for t in item_tags]))
 
         fav_key = f"fav_{item_id}"
         sim_key = f"sim_{item_id}"
@@ -280,6 +300,11 @@ if st.session_state.preview_item is not None:
         st.write("Category:", item["Category"])
         st.write("Color:", item["Color"])
         st.write("Season:", item["Season"])
+
+        item_tags = tags_df[tags_df["ItemID"] == item["ItemID"]]["Tag"].tolist()
+
+        if len(item_tags) > 0:
+            st.write("Tags:", ", ".join(item_tags))
 
         if st.button("Close Preview"):
             st.session_state.preview_item = None
