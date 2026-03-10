@@ -39,10 +39,8 @@ def load_items():
     path = os.path.join(BASE_DIR, "items.csv")
 
     df = pd.read_csv(path, encoding="utf-8-sig")
-
     df.columns = df.columns.str.strip()
-
-    df["ItemID"] = df["ItemID"].astype(str)
+    df["ItemID"] = df["ItemID"].astype(str).str.strip()
 
     df = df[df["ItemID"] != "nan"]
 
@@ -74,20 +72,24 @@ item_index_map = {item: idx for idx, item in enumerate(df["ItemID"])}
 # ==============================
 # Find Image
 # ==============================
+st.write("Image folder:", BASE_DIR / "images")
+st.write("Files:", list((BASE_DIR / "images").iterdir())[:5])
+import pathlib
+
+BASE_DIR = pathlib.Path(__file__).resolve().parents[1]
 
 def find_image(item_id):
 
-    extensions = [
-        ".jpg",".jpeg",".png",".webp",
-        ".JPG",".JPEG",".PNG",".WEBP"
-    ]
+    extensions = [".jpg", ".jpeg", ".png", ".webp", ".JPG", ".PNG"]
+
+    image_folder = BASE_DIR / "images"
 
     for ext in extensions:
 
-        path = os.path.join(BASE_DIR, "images", f"{item_id}{ext}")
+        img_path = image_folder / f"{item_id}{ext}"
 
-        if os.path.exists(path):
-            return path
+        if img_path.exists():
+            return str(img_path)
 
     return None
 
@@ -263,3 +265,4 @@ if st.session_state.preview_item is not None:
         if st.button("Close Preview"):
 
             st.session_state.preview_item = None
+
